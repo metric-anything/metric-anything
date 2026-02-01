@@ -41,15 +41,18 @@ We will follow the open-source plan below in the coming weeks:
 <details open>
 <summary><b>Pre-trained checkpoints</b> </summary>
 
-- [ ] Prompt-Based Metric Depth Map Model
-- [ ] Prompt-Free Metric Point Map Model
-- [ ] Prompt-Free Metric Depth Map Model
+- [ ] 1. Prompt-Based Metric Depth Map Model
+- [x] 2. Prompt-Free Metric Point Map Model
+- [ ] 3. Prompt-Free Metric Depth Map Model
 </details>
 
 <details open>
 <summary><b>Inference Code</b> </summary>
 
 - [ ] Inference scripts and demo
+
+> **2. Prompt-Free Metric Point Map Model:**
+See [HERE](./models/student_pointmap/README.md) | [Huggingface demo](https://huggingface.co/spaces/yjh001/metricanything-student-pointmap)
 
 </details>
 
