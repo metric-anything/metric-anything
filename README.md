@@ -59,6 +59,9 @@ We will follow the open-source plan below in the coming weeks:
 > **2. Prompt-Free Metric Point Map Model:**
 See [HERE](./models/student_pointmap/README.md) | [Huggingface demo](https://huggingface.co/spaces/yjh001/metricanything-student-pointmap)
 
+> **3. Prompt-Free Metric Depth Map Model:**
+See [HERE](./models/student_depthmap/README.md) | [Huggingface demo](https://huggingface.co/spaces/yjh001/metricanything_student_depthmap)
+
 </details>
 
 
