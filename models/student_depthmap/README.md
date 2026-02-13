@@ -3,7 +3,7 @@
 
 ## Quick Start
 
-1. **Install dependencies**: Follow [MoGe-2](https://github.com/microsoft/MoGe)
+1. **Install dependencies**:
 ```bash
 cd models/student_depthmap
 pip install -r requirements.txt
