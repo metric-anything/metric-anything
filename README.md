@@ -2,7 +2,12 @@
 
 <div align="center">
 
-[Paper]() | [Project Page](https://metric-anything.github.io/metric-anything-io/)
+[📄 Paper](https://huggingface.co/papers/2601.22054) |
+[🌐 Project Page](https://metric-anything.github.io/metric-anything-io/) |
+[🧪 Demo: Student DepthMap](https://huggingface.co/spaces/yjh001/metricanything_student_depthmap) |
+[🧪 Demo: Student PointMap](https://huggingface.co/spaces/yjh001/metricanything-student-pointmap)  
+[🤗 HF Weights: Student DepthMap](https://huggingface.co/yjh001/metricanything_student_depthmap) |
+[🤗 HF Weights: Student PointMap](https://huggingface.co/yjh001/metricanything_student_pointmap)
 
 <p align="center">
   <a href="https://mabaorui.github.io/">Baorui Ma †*</a> •
@@ -43,7 +48,7 @@ We will follow the open-source plan below in the coming weeks:
 
 - [ ] 1. Prompt-Based Metric Depth Map Model
 - [x] 2. Prompt-Free Metric Point Map Model
-- [ ] 3. Prompt-Free Metric Depth Map Model
+- [x] 3. Prompt-Free Metric Depth Map Model
 </details>
 
 <details open>
@@ -79,7 +84,7 @@ See [HERE](./models/student_pointmap/README.md) | [Huggingface demo](https://hug
       <td>-</td>
     </tr>
     <tr>
-      <td><a href="" target="_blank"><code>TBD: metricanything_student_depthmap</code></a></td>
+      <td><a href="https://huggingface.co/yjh001/metricanything_student_depthmap" target="_blank"><code>yjh001/metricanything_student_depthmap</code></a></td>
       <td>Image</td>
       <td>✅</td>
       <td>-</td>
@@ -105,15 +110,63 @@ cd metric-anything
 
 </details>
 
-<details>
-<summary><b>Prompt-Free Metric Depth Map Model</b> (Coming Soon)</summary>
+<details open>
+<summary><b>Prompt-Free Metric Depth Map Model</b> </summary>
+
+> More Details Please See [models/student_depthmap/README.md](./models/student_depthmap/README.md)
+
+```bash
+cd models/student_depthmap
+python infer.py \
+    --image_path example_images \
+    --output_path output_infer \
+    --pretrained yjh001/metricanything_student_depthmap
+```
+```python
+import torch
+from PIL import Image
+from torchvision.transforms import v2
+from depth_model import MetricAnythingDepthMap
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# 1️⃣ Load model
+model = MetricAnythingDepthMap.from_pretrained(
+    "yjh001/metricanything_student_depthmap",
+    filename="student_depthmap.pt",
+).to(device).eval()
+
+# 2️⃣ Preprocess image
+transform = v2.Compose([
+    v2.ToImage(),
+    v2.ToDtype(torch.float32, scale=True),
+    v2.Normalize(mean=(0.485, 0.456, 0.406),
+                 std=(0.229, 0.224, 0.225)),
+])
+
+image = Image.open("PATH_TO_IMAGE.jpg").convert("RGB")
+input_tensor = transform(image).unsqueeze(0).to(device)
+
+# 3️⃣ Set focal length (in pixels)
+f_px = image.width  # or provide real focal length if available
+
+# 4️⃣ Inference
+with torch.no_grad():
+    output = model.infer(input_tensor, f_px=f_px)
+
+depth = output["depth"].cpu().numpy()  # (H, W)
+```
+
+
 
 </details>
 
 <details open>
 <summary><b>Prompt-Free Metric Point Map Model</b></summary>
 
-```
+> More Details Please See [models/student_pointmap/README.md](./models/student_pointmap/README.md)
+
+```bash
 cd models/student_pointmap
 python infer.py \
     --input example_images \

@@ -1,0 +1,10 @@
+torch<2.5.0
+torchvision
+gradio
+click
+opencv-python
+scipy
+matplotlib
+trimesh
+pillow
+huggingface_hub

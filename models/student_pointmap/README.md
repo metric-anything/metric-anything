@@ -1,9 +1,11 @@
 
-### Model Card
+# MetricAnything Student PointMap Model
+
+## Model Card
 - **Hugging Face Model**: [yjh001/metricanything_student_pointmap](https://huggingface.co/yjh001/metricanything_student_pointmap)
 - **Base Model**: MoGe-2 ViT-l (finetuned)
 
-### Quick Start
+## Quick Start
 
 1. **Install dependencies**: Follow [MoGe-2](https://github.com/microsoft/MoGe)
 ```bash
@@ -16,7 +18,7 @@ pip install -r requirements.txt
 bash infer.sh
 ```
 
-### Acknowledgments
+## Acknowledgments
 
 We thank the [MoGe-2](https://github.com/microsoft/MoGe) team for their excellent work. If you use this model, please also consider citing MoGe-2:
 
