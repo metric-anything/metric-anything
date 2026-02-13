@@ -85,7 +85,7 @@ See [HERE](./models/student_pointmap/README.md) | [Huggingface demo](https://hug
     </tr>
     <tr>
       <td><a href="https://huggingface.co/yjh001/metricanything_student_depthmap" target="_blank"><code>yjh001/metricanything_student_depthmap</code></a></td>
-      <td>Image</td>
+      <td>Image+Focal</td>
       <td>✅</td>
       <td>876.66M</td>
     </tr>
