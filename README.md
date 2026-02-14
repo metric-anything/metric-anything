@@ -21,7 +21,6 @@
   † Corresponding author | * Equal contribution | ‡ Project leader
 </p>
 
-
 </div>
 
 ## Abstract
@@ -40,8 +39,8 @@
 
 3. **Prompt-Free Distillation**: Distill the pretrained model into a prompt-free student that achieves SOTA performance on monocular depth estimation without requiring prompts.
 
-
 ## Release plan
+
 We will follow the open-source plan below in the coming weeks:
 <details open>
 <summary><b>Pre-trained checkpoints</b> </summary>
@@ -49,6 +48,7 @@ We will follow the open-source plan below in the coming weeks:
 - [ ] 1. Prompt-Based Metric Depth Map Model
 - [x] 2. Prompt-Free Metric Point Map Model
 - [x] 3. Prompt-Free Metric Depth Map Model
+
 </details>
 
 <details open>
@@ -64,10 +64,7 @@ See [HERE](./models/student_depthmap/README.md) | [Huggingface demo](https://hug
 
 </details>
 
-
-
 ## Pretrained Models 🤗
-
 
 <table>
   <thead>
@@ -101,8 +98,8 @@ See [HERE](./models/student_depthmap/README.md) | [Huggingface demo](https://hug
   </tbody>
 </table>
 
-
 ## Quick Start
+
 ```
 git clone https://github.com/metric-anything/metric-anything.git
 cd metric-anything
@@ -125,6 +122,7 @@ python infer.py \
     --output_path output_infer \
     --pretrained yjh001/metricanything_student_depthmap
 ```
+
 ```python
 import torch
 from PIL import Image
@@ -159,8 +157,6 @@ with torch.no_grad():
 
 depth = output["depth"].cpu().numpy()  # (H, W)
 ```
-
-
 
 </details>
 
@@ -204,9 +200,8 @@ The maps are in the same size as the input image.
 """
 
 ```
+
 </details>
-
-
 
 ## Citation
 

@@ -3,6 +3,7 @@ from numbers import Number
 from functools import partial
 from pathlib import Path
 import warnings
+import contextlib
 
 import torch
 import torch.nn as nn
@@ -238,13 +239,15 @@ class MoGeModel(nn.Module):
             num_tokens = int(min_tokens + (resolution_level / 9) * (max_tokens - min_tokens))
 
         # Forward pass
-        with torch.autocast(device_type=self.device.type, dtype=torch.float16, enabled=use_fp16 and self.dtype != torch.float16):
+        _autocast_ctx = torch.autocast(device_type=self.device.type, dtype=torch.float16, enabled=use_fp16 and self.dtype != torch.float16) if self.device.type != 'mps' else contextlib.nullcontext()
+        with _autocast_ctx:
             output = self.forward(image, num_tokens=num_tokens)
         points, normal, mask, metric_scale = (output.get(k, None) for k in ['points', 'normal', 'mask', 'metric_scale'])
 
         # Always process the output in fp32 precision
         points, normal, mask, metric_scale, fov_x = map(lambda x: x.float() if isinstance(x, torch.Tensor) else x, [points, normal, mask, metric_scale, fov_x])
-        with torch.autocast(device_type=self.device.type, dtype=torch.float32):
+        _autocast_ctx2 = torch.autocast(device_type=self.device.type, dtype=torch.float32) if self.device.type != 'mps' else contextlib.nullcontext()
+        with _autocast_ctx2:
             if mask is not None:
                 mask_binary = mask > 0.5
             else:
