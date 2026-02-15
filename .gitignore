@@ -31,7 +31,7 @@ Thumbs.db
 *.safetensors
 
 # Downloaded model weights
-weights/
+deploy/weights/
 
 # Logs
 *.log

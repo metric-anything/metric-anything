@@ -31,7 +31,7 @@ from depth import DAv2Estimator, MetricAnythingEstimator
 # ─────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────
-WEIGHTS_DIR = os.environ.get("DEPTH_WEIGHTS_DIR", "./weights")
+WEIGHTS_DIR = os.environ.get("DEPTH_WEIGHTS_DIR", "./deploy/weights")
 DEFAULT_MODEL = os.environ.get("DEPTH_DEFAULT_MODEL", "dav2-small")
 DEVICE = os.environ.get("DEPTH_DEVICE", "cpu")
 

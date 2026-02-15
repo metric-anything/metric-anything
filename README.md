@@ -18,8 +18,8 @@ A **FastAPI-based metric depth estimation** backend that wraps [MetricAnything](
 pip install -r requirements.txt
 
 # Download models (all, or pick one)
-bash scripts/download_models.sh              # all models
-bash scripts/download_models.sh dav2-small   # just one
+bash deploy/download_models.sh              # all models
+bash deploy/download_models.sh dav2-small   # just one
 
 # Start the server
 uvicorn server:app --port 8081
@@ -111,20 +111,21 @@ curl -X POST http://localhost:8081/depth/model \
 docker buildx build --platform linux/amd64 -t kinekernel/depth-service:latest --push .
 ```
 
-### Run (on the target machine)
+### Deploy (on the target machine)
+
+Copy the `deploy/` folder to the target machine, then:
 
 ```bash
-# Pull the image
-docker pull kinekernel/depth-service:latest
+cd deploy
 
-# Download models to a host directory
-bash scripts/download_models.sh dav2-small
+# Download models
+bash download_models.sh dav2-small
 
-# Run with weights mounted as a volume
-docker run --rm -p 8081:8081 \
-  -v /data/weights:/app/weights \
-  kinekernel/depth-service:latest
+# Pull and start
+docker compose up -d
 ```
+
+See [deploy/docker-compose.yml](deploy/docker-compose.yml) for the full configuration.
 
 ### Environment Variables
 
@@ -143,12 +144,13 @@ docker run --rm -p 8081:8081 \
 │   ├── dav2.py               # DAv2 wrapper (small/base/large)
 │   └── metric_anything.py    # MetricAnything wrapper
 ├── models/student_pointmap/  # Original MoGe model code
-├── scripts/
-│   └── download_models.sh    # One-command model download
+├── deploy/                   # Everything needed on the target machine
+│   ├── docker-compose.yml
+│   ├── download_models.sh
+│   └── weights/              # Downloaded model weights (gitignored)
 ├── demos/                    # Interactive webcam demos
 │   ├── demo_depth_click.py   # MetricAnything click-to-probe
 │   └── demo_dav2.py          # DAv2 click-to-probe
-├── weights/                  # Downloaded weights (gitignored)
 ├── Dockerfile
 ├── requirements.txt
 └── WALKTHROUGH.md

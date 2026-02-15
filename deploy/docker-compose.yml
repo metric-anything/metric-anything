@@ -1,0 +1,39 @@
+services:
+  depth-service:
+    image: kinekernel/depth-service:latest
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./weights:/app/weights
+    environment:
+      - DEPTH_WEIGHTS_DIR=/app/weights
+      - DEPTH_DEFAULT_MODEL=dav2-small
+    # Expose AMD GPU to the container (Vulkan / compute)
+    devices:
+      - /dev/dri
+      - /dev/kfd
+    group_add:
+      - render
+      - video
+    restart: unless-stopped
+
+  llm-service:
+    image: ghcr.io/ggml-org/llama.cpp:server-rocm
+    ports:
+      - "11434:8080"
+    volumes:
+      - ./weights/qwen3-0.6b:/models
+    command: >
+      -m /models/Qwen3-0.6B-Q4_K_M.gguf
+      --host 0.0.0.0
+      --port 8080
+      -c 4096
+      -ngl 99
+    # Expose AMD GPU to the container (ROCm)
+    devices:
+      - /dev/dri
+      - /dev/kfd
+    group_add:
+      - render
+      - video
+    restart: unless-stopped

@@ -1,13 +1,12 @@
 # Core
 torch
 torchvision
-opencv-python
+opencv-python-headless
 numpy
 Pillow
 
-# MetricAnything (student_pointmap model)
+# HuggingFace
 huggingface_hub
-utils3d
 
 # Depth Anything V2 (transformers-based)
 transformers>=4.45.0
