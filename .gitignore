@@ -30,5 +30,8 @@ Thumbs.db
 *.bin
 *.safetensors
 
+# Downloaded model weights
+weights/
+
 # Logs
 *.log

@@ -9,6 +9,7 @@ Usage
     python demo_dav2.py                  # default: small (24.8M params)
     python demo_dav2.py --model base     # 97.5M params
     python demo_dav2.py --model large    # 335M params
+    python demo_dav2.py --fp16           # half precision (halves memory)
 
 Controls
 --------
@@ -81,17 +82,21 @@ def main():
     parser = argparse.ArgumentParser(description="Depth Anything V2 – Metric Indoor Demo")
     parser.add_argument("--model", choices=["small", "base", "large"], default="small",
                         help="Model size: small (24.8M), base (97.5M), large (335M)")
+    parser.add_argument("--fp16", action="store_true",
+                        help="Load model in float16 (halves memory, may speed up)")
     args = parser.parse_args()
 
     model_id, param_info = MODELS[args.model]
-    window_name = f"DAv2 {args.model} ({param_info}) – click to probe"
+    dtype = torch.float16 if args.fp16 else torch.float32
+    prec_label = "fp16" if args.fp16 else "fp32"
+    window_name = f"DAv2 {args.model} ({param_info}, {prec_label}) – click to probe"
 
     device = torch.device("cpu")  # safest on M1; change to "mps" if you like
-    print(f"[info] Using device: {device}")
+    print(f"[info] Using device: {device}  |  precision: {prec_label}")
 
     print(f"[info] Loading model {model_id} ({param_info}) …")
     processor = AutoImageProcessor.from_pretrained(model_id)
-    model_net = AutoModelForDepthEstimation.from_pretrained(model_id).to(device)
+    model_net = AutoModelForDepthEstimation.from_pretrained(model_id, torch_dtype=dtype).to(device)
     model_net.eval()
     print("[info] Model loaded ✓")
 

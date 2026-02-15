@@ -1,0 +1,19 @@
+# Core
+torch
+torchvision
+opencv-python
+numpy
+Pillow
+
+# MetricAnything (student_pointmap model)
+huggingface_hub
+utils3d
+
+# Depth Anything V2 (transformers-based)
+transformers>=4.45.0
+accelerate
+
+# Server
+fastapi
+uvicorn[standard]
+python-multipart

@@ -7,8 +7,9 @@ printed along with the inference time.
 
 Usage
 -----
-    cd MetricAnything
-    python demo_depth_click.py
+    python demo_depth_click.py              # default
+    python demo_depth_click.py --fp16       # half precision (halves memory)
+    python demo_depth_click.py --res 5      # resolution level 0-9
 
 Controls
 --------
@@ -23,10 +24,12 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 # ── make sure the moge package (shipped inside models/student_pointmap) is importable
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_MOGE_PARENT = os.path.join(_SCRIPT_DIR, "models", "student_pointmap")
+_REPO_ROOT = os.path.dirname(_SCRIPT_DIR)  # one level up from demos/
+_MOGE_PARENT = os.path.join(_REPO_ROOT, "models", "student_pointmap")
 if _MOGE_PARENT not in sys.path:
     sys.path.insert(0, _MOGE_PARENT)
 
+import argparse
 import time
 import cv2
 import numpy as np
@@ -80,7 +83,7 @@ def pick_device() -> torch.device:
     return torch.device("cpu")
 
 
-def run_inference(model, frame_rgb, device):
+def run_inference(model, frame_rgb, device, resolution_level):
     """Run depth inference on a single frame. Returns (depth, mask, elapsed_s)."""
     use_fp16 = device.type not in ("mps", "cpu")
     img_tensor = (
@@ -89,7 +92,7 @@ def run_inference(model, frame_rgb, device):
     )
     t0 = time.perf_counter()
     with torch.no_grad():
-        output = model.infer(img_tensor, resolution_level=RESOLUTION_LEVEL, use_fp16=use_fp16)
+        output = model.infer(img_tensor, resolution_level=resolution_level, use_fp16=use_fp16)
     elapsed = time.perf_counter() - t0
 
     depth = output["depth"].cpu().numpy()
@@ -100,11 +103,27 @@ def run_inference(model, frame_rgb, device):
 def main():
     global pending_click, latest_frame_rgb
 
+    parser = argparse.ArgumentParser(description="MetricAnything – Webcam Depth Demo")
+    parser.add_argument("--fp16", action="store_true",
+                        help="Load model in float16 (halves memory, may speed up)")
+    parser.add_argument("--res", type=int, default=RESOLUTION_LEVEL,
+                        help=f"Resolution level 0-9 (default: {RESOLUTION_LEVEL})")
+    args = parser.parse_args()
+
     device = pick_device()
-    print(f"[info] Using device: {device}")
+
+    use_fp16_model = args.fp16
+    if use_fp16_model and device.type == "cpu":
+        print("[warn] fp16 not supported for MetricAnything on CPU (interpolation ops). Falling back to fp32.")
+        use_fp16_model = False
+
+    dtype = torch.float16 if use_fp16_model else torch.float32
+    prec_label = "fp16" if use_fp16_model else "fp32"
+
+    print(f"[info] Using device: {device}  |  precision: {prec_label}  |  resolution_level: {args.res}")
 
     print(f"[info] Loading model {PRETRAINED} …")
-    model = MoGeModel.from_pretrained(PRETRAINED).to(device)
+    model = MoGeModel.from_pretrained(PRETRAINED).to(dtype).to(device)
     model.eval()
     print("[info] Model loaded ✓")
 
@@ -137,7 +156,7 @@ def main():
                 click_point = (cx, cy)
 
                 print(f"[click] Running inference for pixel ({cx}, {cy}) …")
-                depth, mask, elapsed = run_inference(model, latest_frame_rgb, device)
+                depth, mask, elapsed = run_inference(model, latest_frame_rgb, device, args.res)
 
                 # map click coords to depth map coords if sizes differ
                 h, w = frame_bgr.shape[:2]
