@@ -4,7 +4,7 @@ Restructured MetricAnything from flat demo scripts into a **FastAPI depth estima
 
 ## New Structure
 
-```
+```bash
 MetricAnything/
 ├── server.py                 # FastAPI app (entry point)
 ├── depth/                    # Depth estimation module
@@ -21,12 +21,81 @@ MetricAnything/
 
 ## API Endpoints
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/health` | GET | Status + available models |
-| `/depth/points` | POST | Depth at pixel coords (base64 JPEG + points) |
-| `/depth/map` | POST | Full depth map |
-| `/depth/model` | POST | Switch active model at runtime |
+### `GET /health`
+
+```bash
+curl http://localhost:8081/health
+```
+
+```json
+{
+  "status": "ok",
+  "active_model": "dav2-small",
+  "available_models": ["dav2-small", "dav2-base", "dav2-large", "metric-anything"]
+}
+```
+
+### `POST /depth/points`
+
+Returns metric depth (metres) at specific pixel coordinates.
+
+```bash
+curl -X POST http://localhost:8081/depth/points \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_base64": "<base64-encoded JPEG>",
+    "points": [[640, 360], [500, 200]],
+    "model": "dav2-small"
+  }'
+```
+
+```json
+{
+  "depths": [0.6523, 3.1245],
+  "model": "dav2-small",
+  "inference_ms": 450.2
+}
+```
+
+### `POST /depth/map`
+
+Returns the full depth map as base64-encoded float32 bytes.
+
+```bash
+curl -X POST http://localhost:8081/depth/map \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_base64": "<base64-encoded JPEG>",
+    "model": "dav2-small"
+  }'
+```
+
+```json
+{
+  "depth_map_base64": "<base64-encoded float32 array>",
+  "width": 640,
+  "height": 480,
+  "model": "dav2-small",
+  "inference_ms": 832.8
+}
+```
+
+### `POST /depth/model`
+
+Switch the active model for subsequent requests.
+
+```bash
+curl -X POST http://localhost:8081/depth/model \
+  -H "Content-Type: application/json" \
+  -d '{"model": "metric-anything"}'
+```
+
+```json
+{
+  "status": "ok",
+  "active_model": "metric-anything"
+}
+```
 
 ## Quick Start
 

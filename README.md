@@ -1,215 +1,160 @@
-# MetricAnything: Scaling Depth Pretraining with Noisy Heterogeneous Sources
+# Depth Estimation Service
 
-<div align="center">
+A **FastAPI-based metric depth estimation** backend that wraps [MetricAnything](https://github.com/metric-anything/metric-anything) and [Depth Anything V2](https://huggingface.co/depth-anything) into a production-ready API. Designed to run as a sidecar alongside a Tauri/MediaPipe frontend for real-time exercise coaching.
 
-[📄 Paper](https://huggingface.co/papers/2601.22054) |
-[🌐 Project Page](https://metric-anything.github.io/metric-anything-io/) |
-[🧪 Demo: Student DepthMap](https://huggingface.co/spaces/yjh001/metricanything_student_depthmap) |
-[🧪 Demo: Student PointMap](https://huggingface.co/spaces/yjh001/metricanything-student-pointmap)  
-[🤗 HF Weights: Student DepthMap](https://huggingface.co/yjh001/metricanything_student_depthmap) |
-[🤗 HF Weights: Student PointMap](https://huggingface.co/yjh001/metricanything_student_pointmap)
+## Models
 
-<p align="center">
-  <a href="https://mabaorui.github.io/">Baorui Ma †*</a> •
-  <a href="">Jiahui Yang *</a> •
-  <a href="https://scholar.google.com/citations?user=L8tcNioAAAAJ&hl=en">Donglin Di ‡</a> •
-  <a href="https://scholar.google.com/citations?user=gGAoxSAAAAAJ&hl=en">Xuancheng Zhang</a> •
-  <a href="">Jianxun Cui</a> •
-  <a href="">Hao Li</a> •
-  <a href="">Xie Yan</a> •
-  <a href="">Wei Chen</a> <br>
-  † Corresponding author | * Equal contribution | ‡ Project leader
-</p>
-
-</div>
-
-## Abstract
-
-**Metric Anything** introduces a simple and scalable pretraining framework that learns metric depth from noisy, diverse 3D sources without manually engineered prompts, camera-specific modeling, or task-specific architectures. Our key insight is the **Sparse Metric Prompt**, created by randomly masking depth maps, which serves as a universal interface that decouples spatial reasoning from sensor and camera biases.
-
-<div align="center">
-  <img src="assets/pipe.jpeg" width="90%">
-</div>
-
-## Key Ideas
-
-1. **Sparse Metric Prompt**: Randomly mask depth maps to create sparse prompts that decouple spatial understanding from sensor-specific biases, enabling effective learning from diverse, noisy sources.
-
-2. **Large-Scale Data Aggregation**: We assemble ~20M image-depth pairs spanning reconstructed (SfM/SLAM/MVS), captured (LiDAR/ToF/RGB-D), and rendered 3D data across 10,000+ camera models.
-
-3. **Prompt-Free Distillation**: Distill the pretrained model into a prompt-free student that achieves SOTA performance on monocular depth estimation without requiring prompts.
-
-## Release plan
-
-We will follow the open-source plan below in the coming weeks:
-<details open>
-<summary><b>Pre-trained checkpoints</b> </summary>
-
-- [ ] 1. Prompt-Based Metric Depth Map Model
-- [x] 2. Prompt-Free Metric Point Map Model
-- [x] 3. Prompt-Free Metric Depth Map Model
-
-</details>
-
-<details open>
-<summary><b>Inference Code</b> </summary>
-
-- [ ] Inference scripts and demo
-
-> **2. Prompt-Free Metric Point Map Model:**
-See [HERE](./models/student_pointmap/README.md) | [Huggingface demo](https://huggingface.co/spaces/yjh001/metricanything-student-pointmap)
-
-> **3. Prompt-Free Metric Depth Map Model:**
-See [HERE](./models/student_depthmap/README.md) | [Huggingface demo](https://huggingface.co/spaces/yjh001/metricanything_student_depthmap)
-
-</details>
-
-## Pretrained Models 🤗
-
-<table>
-  <thead>
-    <tr>
-      <th></th>
-      <th>Hugging Face Model</th>
-      <th>Input</th>
-      <th>Output Metric Depth</th>
-      <th>#Params</th>
-    </tr>
-  </thead>
-  <tbody>
-      <td rowspan="4">MetricAnything</td>
-      <td><a href="" target="_blank"><code>TBD: metricanything_teacher_pretrained</code></a></td>
-      <td>Image+Sparse Depth</td>
-      <td>✅</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td><a href="https://huggingface.co/yjh001/metricanything_student_depthmap" target="_blank"><code>yjh001/metricanything_student_depthmap</code></a></td>
-      <td>Image+Focal</td>
-      <td>✅</td>
-      <td>876.66M</td>
-    </tr>
-    <tr>
-      <td><a href="https://huggingface.co/yjh001/metricanything_student_pointmap" target="_blank"><code>yjh001/metricanything_student_pointmap</code></a></td>
-      <td>Image</td>
-      <td>✅</td>
-      <td>326M</td>
-    </tr>
-  </tbody>
-</table>
+| Model | ID | Params | Inference (CPU) | Accuracy |
+| --- | --- | --- | --- | --- |
+| DAv2 Small | `dav2-small` | 24.8M | ~0.5s | Good |
+| DAv2 Base | `dav2-base` | 97.5M | ~1.0s | Better |
+| DAv2 Large | `dav2-large` | 335M | ~3.0s | Best (DAv2) |
+| MetricAnything | `metric-anything` | 326M | ~3.0s | Most accurate |
 
 ## Quick Start
 
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Download models (all, or pick one)
+bash scripts/download_models.sh              # all models
+bash scripts/download_models.sh dav2-small   # just one
+
+# Start the server
+uvicorn server:app --port 8081
 ```
-git clone https://github.com/metric-anything/metric-anything.git
-cd metric-anything
-```
 
-<details>
-<summary><b>Prompt-Based Metric Depth Map Model</b> (Coming Soon)</summary>
+## API Endpoints
 
-</details>
-
-<details open>
-<summary><b>Prompt-Free Metric Depth Map Model</b> </summary>
-
-> More Details Please See [models/student_depthmap/README.md](./models/student_depthmap/README.md)
+### `GET /health`
 
 ```bash
-cd models/student_depthmap
-python infer.py \
-    --image_path example_images \
-    --output_path output_infer \
-    --pretrained yjh001/metricanything_student_depthmap
+curl http://localhost:8081/health
 ```
 
-```python
-import torch
-from PIL import Image
-from torchvision.transforms import v2
-from depth_model import MetricAnythingDepthMap
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# 1️⃣ Load model
-model = MetricAnythingDepthMap.from_pretrained(
-    "yjh001/metricanything_student_depthmap",
-    filename="student_depthmap.pt",
-).to(device).eval()
-
-# 2️⃣ Preprocess image
-transform = v2.Compose([
-    v2.ToImage(),
-    v2.ToDtype(torch.float32, scale=True),
-    v2.Normalize(mean=(0.485, 0.456, 0.406),
-                 std=(0.229, 0.224, 0.225)),
-])
-
-image = Image.open("PATH_TO_IMAGE.jpg").convert("RGB")
-input_tensor = transform(image).unsqueeze(0).to(device)
-
-# 3️⃣ Set focal length (in pixels)
-f_px = image.width  # or provide real focal length if available
-
-# 4️⃣ Inference
-with torch.no_grad():
-    output = model.infer(input_tensor, f_px=f_px)
-
-depth = output["depth"].cpu().numpy()  # (H, W)
-```
-
-</details>
-
-<details open>
-<summary><b>Prompt-Free Metric Point Map Model</b></summary>
-
-> More Details Please See [models/student_pointmap/README.md](./models/student_pointmap/README.md)
-
-```bash
-cd models/student_pointmap
-python infer.py \
-    --input example_images \
-    --output output_infer \
-    --weights yjh001/metricanything_student_pointmap \
-    --save_glb
-```
-
-```python
-import cv2
-import torch
-from moge.model.v2 import MoGeModel
-device = torch.device("cuda")
-
-model = MoGeModel.from_pretrained("yjh001/metricanything_student_pointmap").to(device)                             
-
-# Read the input image and convert to tensor (3, H, W) with RGB values normalized to [0, 1]
-input_image = cv2.cvtColor(cv2.imread("PATH_TO_IMAGE.jpg"), cv2.COLOR_BGR2RGB)                       
-input_image = torch.tensor(input_image / 255, dtype=torch.float32, device=device).permute(2, 0, 1)    
-
-# Infer 
-output = model.infer(input_image)
-"""
-`output` has keys "points", "depth", "mask" and "intrinsics",
-The maps are in the same size as the input image. 
+```json
 {
-    "points": (H, W, 3),    # point map with metric scale in OpenCV camera coordinate system (x right, y down, z forward).
-    "depth": (H, W),        # depth map
-    "mask": (H, W),         # a binary mask for valid pixels. 
-    "intrinsics": (3, 3),   # normalized camera intrinsics
-}
-"""
-
-```
-
-</details>
-
-## Citation
-
-```bibtex
-@article{metricanything2026,
-  title={MetricAnything: Scaling Metric Depth Pretraining with Noisy Heterogeneous Sources},
-  author={Baorui Ma, Jiahui Yang, Donglin Di, Xuancheng Zhang, Jianxun Cui, Hao Li, Xie Yan and Wei Chen},
-  journal={arXiv preprint},
-  year={2026}
+  "status": "ok",
+  "active_model": "dav2-small",
+  "available_models": ["dav2-small", "dav2-base", "dav2-large", "metric-anything"]
 }
 ```
+
+### `POST /depth/points`
+
+Get metric depth (metres) at specific pixel coordinates.
+
+```bash
+curl -X POST http://localhost:8081/depth/points \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_base64": "<base64-encoded JPEG>",
+    "points": [[640, 360], [500, 200]],
+    "model": "dav2-small"
+  }'
+```
+
+```json
+{
+  "depths": [0.6523, 3.1245],
+  "model": "dav2-small",
+  "inference_ms": 450.2
+}
+```
+
+### `POST /depth/map`
+
+Get the full depth map as base64-encoded float32 bytes.
+
+```bash
+curl -X POST http://localhost:8081/depth/map \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image_base64": "<base64-encoded JPEG>",
+    "model": "dav2-small"
+  }'
+```
+
+```json
+{
+  "depth_map_base64": "<base64-encoded float32 array>",
+  "width": 640,
+  "height": 480,
+  "model": "dav2-small",
+  "inference_ms": 832.8
+}
+```
+
+### `POST /depth/model`
+
+Switch the active model at runtime.
+
+```bash
+curl -X POST http://localhost:8081/depth/model \
+  -H "Content-Type: application/json" \
+  -d '{"model": "metric-anything"}'
+```
+
+```json
+{
+  "status": "ok",
+  "active_model": "metric-anything"
+}
+```
+
+## Docker
+
+### Build (cross-platform from Mac → AMD64)
+
+```bash
+docker buildx build --platform linux/amd64 -t kinekernel/depth-service:latest --push .
+```
+
+### Run (on the target machine)
+
+```bash
+# Pull the image
+docker pull kinekernel/depth-service:latest
+
+# Download models to a host directory
+bash scripts/download_models.sh dav2-small
+
+# Run with weights mounted as a volume
+docker run --rm -p 8081:8081 \
+  -v /data/weights:/app/weights \
+  kinekernel/depth-service:latest
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DEPTH_WEIGHTS_DIR` | `./weights` | Path to downloaded model weights |
+| `DEPTH_DEFAULT_MODEL` | `dav2-small` | Model loaded on startup |
+| `DEPTH_DEVICE` | `cpu` | PyTorch device (`cpu`, `cuda`) |
+
+## Project Structure
+
+```bash
+├── server.py                 # FastAPI app (entry point)
+├── depth/                    # Depth estimation module
+│   ├── __init__.py
+│   ├── dav2.py               # DAv2 wrapper (small/base/large)
+│   └── metric_anything.py    # MetricAnything wrapper
+├── models/student_pointmap/  # Original MoGe model code
+├── scripts/
+│   └── download_models.sh    # One-command model download
+├── demos/                    # Interactive webcam demos
+│   ├── demo_depth_click.py   # MetricAnything click-to-probe
+│   └── demo_dav2.py          # DAv2 click-to-probe
+├── weights/                  # Downloaded weights (gitignored)
+├── Dockerfile
+├── requirements.txt
+└── WALKTHROUGH.md
+```
+
+## Credits
+
+- [MetricAnything](https://github.com/metric-anything/metric-anything) — Ma et al., 2026
+- [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) — Yang et al., 2024
