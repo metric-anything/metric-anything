@@ -108,7 +108,33 @@ curl -X POST http://localhost:8081/depth/model \
 ### Build (cross-platform from Mac → AMD64)
 
 ```bash
-docker buildx build --platform linux/amd64 -t kinekernel/depth-service:latest --push .
+# Build and keep locally (for direct transfer)
+docker buildx build --platform linux/amd64 --load -t kinekernel/depth-service:latest .
+
+# Or build and push to Docker Hub
+docker buildx build --platform linux/amd64 --push -t kinekernel/depth-service:latest .
+```
+
+> **Note:** The `--load` flag is required to keep the image in your local Docker so it can be exported. Without it, buildx only stores it in the build cache.
+
+### Direct Transfer (LAN)
+
+Transfer the image directly to the mini PC without pushing to Docker Hub:
+
+```bash
+# One-liner: stream directly over SSH (fastest, no temp file)
+docker save kinekernel/depth-service:latest | gzip | ssh kk@192.168.0.236 'podman load'
+```
+
+Or in two steps:
+
+```bash
+# 1. Export to tarball
+docker save kinekernel/depth-service:latest | gzip > depth-service.tar.gz
+
+# 2. Copy and load
+scp depth-service.tar.gz kk@192.168.0.236:~/deploy/
+ssh kk@192.168.0.236 'podman load -i ~/deploy/depth-service.tar.gz'
 ```
 
 ### Deploy (on the target machine)
