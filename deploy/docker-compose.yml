@@ -4,7 +4,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./weights:/app/weights
+      - ./weights:/app/weights:z
     environment:
       - DEPTH_WEIGHTS_DIR=/app/weights
       - DEPTH_DEFAULT_MODEL=dav2-small
@@ -13,27 +13,25 @@ services:
       - /dev/dri
       - /dev/kfd
     group_add:
-      - render
-      - video
+      - "105" # render (verify with: getent group render)
+      - "39" # video  (verify with: getent group video)
     restart: unless-stopped
 
   llm-service:
-    image: ghcr.io/ggml-org/llama.cpp:server-rocm
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
     ports:
       - "11434:8080"
     volumes:
-      - ./weights/qwen3-0.6b:/models
+      - ./weights/qwen3-0.6b:/models:z
     command: >
-      -m /models/Qwen3-0.6B-Q4_K_M.gguf
-      --host 0.0.0.0
-      --port 8080
-      -c 4096
-      -ngl 99
-    # Expose AMD GPU to the container (ROCm)
+      -m /models/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 8080 -c 2048 -ngl 99
+    # Expose GPU to the container (Vulkan)
     devices:
       - /dev/dri
-      - /dev/kfd
     group_add:
-      - render
-      - video
+      - "105" # render (verify with: getent group render)
+      - "39" # video  (verify with: getent group video)
     restart: unless-stopped
+    # Disable the image's built-in healthcheck (it lacks curl/wget)
+    healthcheck:
+      disable: true

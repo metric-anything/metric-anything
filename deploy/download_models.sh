@@ -41,20 +41,23 @@ download_model() {
 
     mkdir -p "$dest"
 
-    # GGUF models: direct file download
+    # GGUF models: direct file download (for Docker mounting)
     if [ "$hf_id" = "__gguf__" ]; then
         local url=""
+        local outfile=""
         case "$name" in
-            qwen3-0.6b) url="$QWEN3_GGUF_URL" ;;
+            qwen3-0.6b)
+                url="$QWEN3_GGUF_URL"
+                outfile="${dest}/Qwen3-0.6B-Q4_K_M.gguf"
+                ;;
         esac
-        local filename
-        filename="$(basename "$url")"
-        echo "⬇ Downloading ${name} (GGUF) → ${dest}/${filename} …"
+        echo "⬇ Downloading ${name} (GGUF) → ${outfile} …"
         if command -v wget &>/dev/null; then
-            wget -q --show-progress -O "${dest}/${filename}" "$url"
+            wget --continue --tries=5 -O "$outfile" "$url"
         else
-            curl -L --progress-bar -o "${dest}/${filename}" "$url"
+            curl -L -f --progress-bar -o "$outfile" "$url"
         fi
+
     else
         echo "⬇ Downloading ${name} (${hf_id}) → ${dest} …"
         huggingface-cli download "$hf_id" --local-dir "$dest"

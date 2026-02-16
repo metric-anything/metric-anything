@@ -32,6 +32,7 @@ Thumbs.db
 
 # Downloaded model weights
 deploy/weights/
+*.llamafile
 
 # Logs
 *.log
