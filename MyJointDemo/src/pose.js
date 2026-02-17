@@ -17,6 +17,10 @@ export const LANDMARK = {
   RIGHT_ANKLE: 28,
   LEFT_SHOULDER: 11,
   RIGHT_SHOULDER: 12,
+  LEFT_ELBOW: 13,
+  RIGHT_ELBOW: 14,
+  LEFT_WRIST: 15,
+  RIGHT_WRIST: 16,
 };
 
 let poseLandmarker = null;
@@ -91,6 +95,10 @@ export function extractJoints(landmarks) {
     rightAnkle: get(LANDMARK.RIGHT_ANKLE),
     leftShoulder: get(LANDMARK.LEFT_SHOULDER),
     rightShoulder: get(LANDMARK.RIGHT_SHOULDER),
+    leftElbow: get(LANDMARK.LEFT_ELBOW),
+    rightElbow: get(LANDMARK.RIGHT_ELBOW),
+    leftWrist: get(LANDMARK.LEFT_WRIST),
+    rightWrist: get(LANDMARK.RIGHT_WRIST),
   };
 }
 

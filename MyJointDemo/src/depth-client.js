@@ -17,17 +17,34 @@ let captureCtx = null;
 /**
  * Capture the current video frame as a base64 JPEG string (no data: prefix).
  * @param {HTMLVideoElement} video
- * @param {number} [quality=0.7]  JPEG quality 0–1
+ * @param {object} [options]
+ * @param {number} [options.quality=0.7]  JPEG quality 0–1
+ * @param {number} [options.width=0]      Target width (0 = original size)
  * @returns {string} base64-encoded JPEG
  */
-export function captureFrameBase64(video, quality = 0.7) {
+export function captureFrameBase64(video, { quality = 0.7, width = 0 } = {}) {
   if (!captureCanvas) {
     captureCanvas = document.createElement("canvas");
     captureCtx = captureCanvas.getContext("2d");
   }
-  captureCanvas.width = video.videoWidth;
-  captureCanvas.height = video.videoHeight;
-  captureCtx.drawImage(video, 0, 0);
+
+  let targetWidth = video.videoWidth;
+  let targetHeight = video.videoHeight;
+
+  // Downscale if requested
+  if (width > 0 && width < targetWidth) {
+    const scale = width / targetWidth;
+    targetWidth = width;
+    targetHeight = Math.round(targetHeight * scale);
+  }
+
+  // Resize canvas only if dimensions change (avoids allocation churn)
+  if (captureCanvas.width !== targetWidth || captureCanvas.height !== targetHeight) {
+    captureCanvas.width = targetWidth;
+    captureCanvas.height = targetHeight;
+  }
+
+  captureCtx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
   // toDataURL returns "data:image/jpeg;base64,..." — strip the prefix
   const dataUrl = captureCanvas.toDataURL("image/jpeg", quality);

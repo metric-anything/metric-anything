@@ -3,20 +3,23 @@
  *
  * Orchestrates webcam capture, pose detection, squat tracking,
  * depth queries, and LLM feedback into a cohesive real-time UI.
+ *
+ * OPTIMIZATIONS:
+ * - Camera: 720p (sufficient for pose detection, faster than 1080p)
+ * - Depth:  Images downscaled to 640px before upload (~80% bandwidth saving)
  */
 
 import "./style.css";
 import { initPose, detectPose, extractJoints, toPixel } from "./pose.js";
-import { createSquatTracker } from "./squat.js";
+import { createSquatTracker } from "./reach-joint.js";
 import { captureFrameBase64, queryDepthAtPoints, checkDepthHealth } from "./depth-client.js";
-import { getSquatFeedback, checkLLMHealth } from "./llm-client.js";
+import { getReachFeedback, checkLLMHealth } from "./llm-client.js";
 import {
   drawPoseOverlay,
   updateStatsPanel,
   addRepToTable,
   clearRepTable,
   showFeedback,
-  hideFeedback,
   updateServiceStatus,
   updateFPS,
 } from "./ui.js";
@@ -47,24 +50,58 @@ const tracker = createSquatTracker({
 
   onDepthRequest(phase, joints) {
     // Query depth service (non-blocking)
-    if (depthInFlight) return;
-    depthInFlight = true;
+    // Query depth service (non-blocking)
+    // Note: We authorize concurrent requests for different phases to avoid missing data.
+    // The service should handle it. If bandwidth is issue, we can debounce.
 
-    const frame = captureFrameBase64(video);
     const w = video.videoWidth;
     const h = video.videoHeight;
+
+    // Optimization: Downscale image for depth service
+    // Most depth models work at ~518px internal resolution.
+    // 640px is a safe upper bound that saves huge bandwidth vs 1080p.
+    const DEPTH_TARGET_WIDTH = 640;
+    
+    // Calculate scale factor if we need to resize
+    const scale = (w > DEPTH_TARGET_WIDTH) ? (DEPTH_TARGET_WIDTH / w) : 1.0;
+
+    // Capture scaled frame using our optimized client
+    const frame = captureFrameBase64(video, { width: DEPTH_TARGET_WIDTH });
 
     const leftKneePx = toPixel(joints.leftKnee, w, h);
     const rightKneePx = toPixel(joints.rightKnee, w, h);
 
+    // Dynamic targets based on phase
+    // Start = Body Depth (Shoulders)
+    // Bottom = Reach Depth (Wrists)
+    let targets;
+    if (phase === "start") {
+        targets = [
+            toPixel(joints.leftShoulder, w, h),
+            toPixel(joints.rightShoulder, w, h)
+        ];
+    } else {
+        targets = [
+            toPixel(joints.leftWrist, w, h),
+            toPixel(joints.rightWrist, w, h)
+        ];
+    }
+
+    // IMPORTANT: We must scale the query points to match the resized image!
     queryDepthAtPoints(frame, [
-      [leftKneePx.x, leftKneePx.y],
-      [rightKneePx.x, rightKneePx.y],
+      [Math.round(targets[0].x * scale), Math.round(targets[0].y * scale)],
+      [Math.round(targets[1].x * scale), Math.round(targets[1].y * scale)],
     ])
       .then((result) => {
-        // Average the two knee depths
-        const avgDepth = (result.depths[0] + result.depths[1]) / 2;
-        tracker.setDepth(phase, avgDepth);
+        // Start: Average Shoulders
+        // Bottom: Min Wrist (Closest to camera)
+        let depthVal;
+        if (phase === "start") {
+             depthVal = (result.depths[0] + result.depths[1]) / 2;
+        } else {
+             depthVal = Math.min(result.depths[0], result.depths[1]);
+        }
+        tracker.setDepth(phase, depthVal);
 
         // Update latency display
         const latencyEl = document.getElementById("latency");
@@ -74,12 +111,16 @@ const tracker = createSquatTracker({
         console.warn(`Depth query failed (${phase}):`, err.message);
       })
       .finally(() => {
-        depthInFlight = false;
+         // depthInFlight = false; // concurrency check removed
       });
   },
 
   onRepComplete(rep) {
     console.log("Rep complete:", rep);
+    // Start of a new set: clear the old table
+    if (rep.repNo === 1) {
+      clearRepTable();
+    }
     addRepToTable(rep);
   },
 
@@ -94,7 +135,7 @@ async function requestLLMFeedback(reps) {
   showFeedback("Analyzing your squat form…", true);
 
   try {
-    await getSquatFeedback(reps, (chunk, fullText) => {
+    await getReachFeedback(reps, (chunk, fullText) => {
       showFeedback(fullText, true);
     });
 
@@ -107,11 +148,7 @@ async function requestLLMFeedback(reps) {
     showFeedback(`⚠ Could not get feedback: ${err.message}`, false);
   }
 
-  // Auto-clear rep table after feedback, ready for next set
-  setTimeout(() => {
-    clearRepTable();
-    hideFeedback();
-  }, 15000);
+  // Feedback stays visible until next set replaces it.
 }
 
 // ── Health Checks ──
@@ -184,7 +221,9 @@ async function init() {
   try {
     updateLoadingStatus("Requesting camera access…");
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: "user" },
+      // Optimization: 720p is approx 2x faster to process than 1080p
+      // and still offers plenty of detail for body tracking.
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
       audio: false,
     });
     video.srcObject = stream;

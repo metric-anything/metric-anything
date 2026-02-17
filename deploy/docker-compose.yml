@@ -30,8 +30,8 @@ services:
     healthcheck:
       disable: true
 
-  squat-demo:
-    image: kinekernel/squat-demo:latest
+  joint-demo:
+    image: kinekernel/joint-demo:latest
     ports:
       - "3000:80"
     restart: unless-stopped

@@ -6,7 +6,7 @@
 
 import { PoseLandmarker } from "@mediapipe/tasks-vision";
 import { LANDMARK, createDrawingUtils } from "./pose.js";
-import { STATE } from "./squat.js";
+import { STATE } from "./reach-joint.js";
 
 let drawingUtils = null;
 
@@ -25,10 +25,10 @@ const COLORS = {
 
 const STATE_LABELS = {
   [STATE.IDLE]: { text: "Waiting for pose…", color: COLORS.textSecondary },
-  [STATE.STANDING]: { text: "Standing — ready", color: COLORS.success },
-  [STATE.DESCENDING]: { text: "Going down ⬇", color: COLORS.accent },
-  [STATE.AT_BOTTOM]: { text: "At bottom ⬇⬇", color: COLORS.warning },
-  [STATE.ASCENDING]: { text: "Coming up ⬆", color: COLORS.accent },
+  [STATE.RESET]: { text: "Ready (W-Pose)", color: COLORS.success },
+  [STATE.REACHING]: { text: "Reaching…", color: COLORS.accent },
+  [STATE.REACHED]: { text: "Target Reached!", color: COLORS.warning },
+  [STATE.RETURNING]: { text: "Returning…", color: COLORS.accent },
 };
 
 /**
@@ -61,47 +61,63 @@ export function drawPoseOverlay(ctx, canvas, landmarks, joints, depths) {
     const w = canvas.width;
     const h = canvas.height;
 
-    const knees = [
-      { joint: joints.leftKnee, label: "L" },
-      { joint: joints.rightKnee, label: "R" },
+    const markers = [
+      { joint: joints.leftShoulder, label: "LS", color: COLORS.success }, // Body
+      { joint: joints.rightShoulder, label: "RS", color: COLORS.success },
+      { joint: joints.leftWrist, label: "LW", color: COLORS.accent },    // Reach
+      { joint: joints.rightWrist, label: "RW", color: COLORS.accent },
     ];
 
-    knees.forEach(({ joint, label }, i) => {
+    markers.forEach(({ joint, label, color }, i) => {
       const px = joint.x * w;
       const py = joint.y * h;
 
-      // Glowing knee marker
+      // Glowing marker
       ctx.beginPath();
-      ctx.arc(px, py, 10, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.accentDim;
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color; // Use specific color
       ctx.fill();
-      ctx.strokeStyle = COLORS.accent;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Depth label (if available)
-      const depthVal = depths?.[i];
-      if (depthVal != null) {
-        const text = `${depthVal.toFixed(3)}m`;
-        ctx.font = "bold 14px 'Inter', monospace";
-        ctx.fillStyle = COLORS.accent;
-        ctx.textAlign = "left";
-        ctx.fillText(text, px + 16, py + 5);
-      }
+      // Label
+      // We don't map individual depths here easily because depths are aggregated (start/bottom).
+      // So just show the label for now.
+      ctx.font = "10px 'Inter', monospace";
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillText(label, px + 12, py + 4);
     });
   }
+}
+
+// Cache DOM elements to avoid lookups every frame
+const uiCache = {
+  stateEl: null,
+  repEl: null,
+  startDepthEl: null,
+  bottomDepthEl: null,
+  changeEl: null,
+  latencyEl: null,
+};
+
+function getUiElements() {
+  if (!uiCache.stateEl) {
+    uiCache.stateEl = document.getElementById("squat-state");
+    uiCache.repEl = document.getElementById("rep-count");
+    uiCache.startDepthEl = document.getElementById("start-depth");
+    uiCache.bottomDepthEl = document.getElementById("bottom-depth");
+    uiCache.changeEl = document.getElementById("depth-change");
+    uiCache.latencyEl = document.getElementById("latency");
+  }
+  return uiCache;
 }
 
 /**
  * Update the stats panel in the DOM.
  */
 export function updateStatsPanel(state, repCount, repsPerSet, depths, latency) {
-  const stateEl = document.getElementById("squat-state");
-  const repEl = document.getElementById("rep-count");
-  const startDepthEl = document.getElementById("start-depth");
-  const bottomDepthEl = document.getElementById("bottom-depth");
-  const changeEl = document.getElementById("depth-change");
-  const latencyEl = document.getElementById("latency");
+  const { stateEl, repEl, startDepthEl, bottomDepthEl, changeEl, latencyEl } = getUiElements();
 
   const sl = STATE_LABELS[state] || STATE_LABELS[STATE.IDLE];
   if (stateEl) {

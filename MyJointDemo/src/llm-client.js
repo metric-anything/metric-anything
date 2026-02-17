@@ -8,22 +8,22 @@
 // For local dev, set VITE_LLM_URL=http://localhost:11434
 const LLM_URL = import.meta.env.VITE_LLM_URL || "/api/llm";
 
-const SYSTEM_PROMPT = `You are an expert physical therapist and human movement scientist. You specialize in biomechanics analysis for squat exercises.
+const SYSTEM_PROMPT = `You are an expert physical therapist and human movement scientist. You specialize in biomechanics analysis for upper body reach gestures.
 
-You will receive squat rep data that includes:
+You will receive reach rep data that includes:
 - Rep number
-- Starting knee depth (metres from camera) — the knee position when standing
-- Bottom knee depth (metres from camera) — the knee position at the lowest point
-- Depth change (metres) — how much the knee moved toward/away from the camera
+- Starting body depth (metres from camera)
+- Peak reach depth (metres from camera) — the hand position at furthest point
+- Reach distance (metres) — how far the hand travelled forward
 - Time spent per rep (seconds)
 
 Analyze the data and provide:
-1. A brief assessment of squat form consistency
-2. Whether the depth is adequate (knees should travel forward during a squat)
+1. A brief assessment of reach consistency
+2. Whether the extension is adequate
 3. Any tempo concerns (too fast/slow)
 4. One specific, actionable tip to improve
 
-Keep your response concise (3-5 sentences). Be encouraging but honest.`;
+Keep your response concise (3-5 sentences). Be encouraging but honest. Must in Chinese.`;
 
 /**
  * Get coaching feedback from the LLM.
@@ -32,15 +32,15 @@ Keep your response concise (3-5 sentences). Be encouraging but honest.`;
  * @param {function} onChunk — called with each text chunk as it streams
  * @returns {Promise<string>} — the full response text
  */
-export async function getSquatFeedback(reps, onChunk) {
+export async function getReachFeedback(reps, onChunk) {
   const userData = reps.map((r) =>
-    `Rep ${r.repNo}: start=${r.startDepth?.toFixed(3) ?? "N/A"}m, ` +
-    `bottom=${r.bottomDepth?.toFixed(3) ?? "N/A"}m, ` +
-    `change=${r.depthChange?.toFixed(3) ?? "N/A"}m, ` +
+    `Rep ${r.repNo}: start_body=${r.startDepth?.toFixed(3) ?? "N/A"}m, ` +
+    `peak_hand=${r.bottomDepth?.toFixed(3) ?? "N/A"}m, ` +
+    `reach_dist=${r.depthChange?.toFixed(3) ?? "N/A"}m, ` +
     `time=${r.timeSpent}s`
   ).join("\n");
 
-  const userMessage = `Here is my squat data for ${reps.length} reps:\n\n${userData}\n\nPlease analyze my squat performance.`;
+  const userMessage = `Here is my reach gesture data for ${reps.length} reps:\n\n${userData}\n\nPlease analyze my reach performance.`;
 
   const body = {
     messages: [

@@ -297,19 +297,24 @@ html, body {
 }
 
 /* ── Feedback Panel (bottom) ── */
-.feedback-bar {
-  grid-column: 1 / -1;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
+/* ── Feedback Panel (moved to side) ── */
+.feedback-card {
   max-height: 0;
+  padding: 0 16px;
   overflow: hidden;
-  transition: max-height 0.4s ease, padding 0.4s ease;
-  padding: 0 20px;
+  opacity: 0;
+  border-color: transparent;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0;
+  background: var(--bg-glass); /* Ensure it matches other cards */
 }
 
-.feedback-bar.visible {
-  max-height: 200px;
-  padding: 16px 20px;
+.feedback-card.visible {
+  max-height: 800px;
+  padding: 16px;
+  opacity: 1;
+  border-color: var(--border);
+  margin-top: 0; /* Gap is handled by parent flex gap usually, but let's see */
 }
 
 .feedback-header {
@@ -327,6 +332,9 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .feedback-spinner {

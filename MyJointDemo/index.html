@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Real-time squat depth measurement and AI coaching feedback demo" />
-  <title>MySquat Demo — Depth & AI Coach</title>
+  <title>My Joint Demo</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </head>
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen" class="loading-screen">
-    <div class="loading-logo">MySquat Demo</div>
+    <div class="loading-logo">My Joint Demo</div>
     <div id="loading-status" class="loading-status">Initialising…</div>
     <div class="loading-bar"><div class="loading-bar-fill"></div></div>
   </div>
@@ -21,7 +21,7 @@
     <header class="top-bar">
       <div class="top-bar-left">
         <div class="live-badge">Live</div>
-        <span class="app-title">MySquat Demo</span>
+        <span class="app-title">My Joint Demo</span>
       </div>
       <div class="top-bar-right">
         <div class="service-status">
@@ -45,7 +45,7 @@
       <div class="video-state-badge" id="squat-state">Waiting for pose…</div>
     </main>
 
-    <!-- Side Panel -->
+    <!-- Feedback Panel (side) -->
     <aside class="side-panel">
       <!-- Current Rep Stats -->
       <div class="panel-card">
@@ -92,17 +92,17 @@
           </table>
         </div>
       </div>
-    </aside>
 
-    <!-- Feedback Panel (bottom) -->
-    <div id="feedback-panel" class="feedback-bar">
-      <div class="feedback-header">
-        <span class="icon">🤖</span>
-        <h3>AI Coach Feedback</h3>
-        <div id="feedback-spinner" class="feedback-spinner"></div>
+      <!-- Feedback Panel (moved here) -->
+      <div id="feedback-panel" class="panel-card feedback-card">
+        <div class="feedback-header">
+          <span class="icon">🤖</span>
+          <h3>AI Coach Feedback</h3>
+          <div id="feedback-spinner" class="feedback-spinner"></div>
+        </div>
+        <div id="feedback-content"></div>
       </div>
-      <div id="feedback-content"></div>
-    </div>
+    </aside>
   </div>
 
   <script type="module" src="/src/main.js"></script>
