@@ -132,7 +132,14 @@ class DAv2Estimator:
             Depth value at each requested point.
         """
         depth_map = self.estimate(frame_rgb)
-        return [float(depth_map[y, x]) for x, y in points]
+        h, w = depth_map.shape
+        results = []
+        for x, y in points:
+            # Clamp coordinates to [0, dim-1]
+            x_safe = max(0, min(int(x), w - 1))
+            y_safe = max(0, min(int(y), h - 1))
+            results.append(float(depth_map[y_safe, x_safe]))
+        return results
 
     def estimate_timed(self, frame_rgb: np.ndarray):
         """Like ``estimate`` but also returns elapsed seconds.

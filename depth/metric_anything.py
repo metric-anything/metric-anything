@@ -131,6 +131,11 @@ class MetricAnythingEstimator:
                 dy = min(int(y * sy), h - 1)
             else:
                 dx, dy = x, y
+            
+            # Ensure coordinates are safe (handle negative or > max)
+            dx = max(0, min(int(dx), w - 1))
+            dy = max(0, min(int(dy), h - 1))
+            
             results.append(float(depth_map[dy, dx]))
         return results
 

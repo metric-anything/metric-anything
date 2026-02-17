@@ -99,8 +99,8 @@ export function extractJoints(landmarks) {
  */
 export function toPixel(normCoord, videoWidth, videoHeight) {
   return {
-    x: Math.round(normCoord.x * videoWidth),
-    y: Math.round(normCoord.y * videoHeight),
+    x: Math.max(0, Math.min(Math.round(normCoord.x * videoWidth), videoWidth - 1)),
+    y: Math.max(0, Math.min(Math.round(normCoord.y * videoHeight), videoHeight - 1)),
   };
 }
 
