@@ -7,7 +7,10 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libgl1 libglib2.0-0 git && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
+# Layer 1: Heavy deps (torch ~4GB) — cached unless version changes
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
+
+# Layer 2: Remaining deps — rebuilds faster on changes
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
