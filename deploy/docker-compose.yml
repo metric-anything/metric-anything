@@ -8,13 +8,7 @@ services:
     environment:
       - DEPTH_WEIGHTS_DIR=/app/weights
       - DEPTH_DEFAULT_MODEL=dav2-small
-    # Expose AMD GPU to the container (Vulkan / compute)
-    devices:
-      - /dev/dri
-      - /dev/kfd
-    group_add:
-      - "105" # render (verify with: getent group render)
-      - "39" # video  (verify with: getent group video)
+      - DEPTH_DEVICE=cpu
     restart: unless-stopped
 
   llm-service:
@@ -35,3 +29,9 @@ services:
     # Disable the image's built-in healthcheck (it lacks curl/wget)
     healthcheck:
       disable: true
+
+  squat-demo:
+    image: kinekernel/squat-demo:latest
+    ports:
+      - "3000:80"
+    restart: unless-stopped

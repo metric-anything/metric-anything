@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Real-time squat depth measurement and AI coaching feedback demo" />
+  <title>MySquat Demo — Depth & AI Coach</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-logo">MySquat Demo</div>
+    <div id="loading-status" class="loading-status">Initialising…</div>
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  </div>
+
+  <!-- App -->
+  <div class="app">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <div class="live-badge">Live</div>
+        <span class="app-title">MySquat Demo</span>
+      </div>
+      <div class="top-bar-right">
+        <div class="service-status">
+          <div class="status-item">
+            <span id="depth-status" class="status-dot"></span>
+            <span>Depth</span>
+          </div>
+          <div class="status-item">
+            <span id="llm-status" class="status-dot"></span>
+            <span>LLM</span>
+          </div>
+        </div>
+        <span id="fps">— FPS</span>
+      </div>
+    </header>
+
+    <!-- Video Area -->
+    <main class="video-container">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="video-state-badge" id="squat-state">Waiting for pose…</div>
+    </main>
+
+    <!-- Side Panel -->
+    <aside class="side-panel">
+      <!-- Current Rep Stats -->
+      <div class="panel-card">
+        <h3>Current Rep</h3>
+        <div class="stats-grid">
+          <div class="stat-item" style="grid-column: 1 / -1">
+            <span class="stat-label">Rep</span>
+            <span class="stat-value stat-large" id="rep-count">0 / 5</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Start Depth</span>
+            <span class="stat-value" id="start-depth">—</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Bottom Depth</span>
+            <span class="stat-value" id="bottom-depth">—</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Depth Change</span>
+            <span class="stat-value" id="depth-change">—</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Service Latency</span>
+            <span class="stat-value" id="latency">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rep History -->
+      <div class="panel-card">
+        <h3>Rep History</h3>
+        <div class="rep-history">
+          <table class="rep-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Start</th>
+                <th>Bottom</th>
+                <th>Δ</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="rep-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Feedback Panel (bottom) -->
+    <div id="feedback-panel" class="feedback-bar">
+      <div class="feedback-header">
+        <span class="icon">🤖</span>
+        <h3>AI Coach Feedback</h3>
+        <div id="feedback-spinner" class="feedback-spinner"></div>
+      </div>
+      <div id="feedback-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
