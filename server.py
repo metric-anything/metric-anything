@@ -19,8 +19,10 @@ import io
 import logging
 import os
 import time
+import gc
 from typing import List, Optional, Tuple
 
+import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from PIL import Image
@@ -100,8 +102,19 @@ def _resolve_weights_dir():
 
 def _load_model(model_name: str):
     """Load (or return cached) estimator for the given model name."""
-    if model_name in _loaded_models:
+    # Check if the requested model is already the ONLY loaded one
+    if model_name in _loaded_models and len(_loaded_models) == 1:
         return _loaded_models[model_name]
+
+    # If we have other models loaded (or just switching), unload them first
+    if _loaded_models:
+        logger.info("Unloading existing models to free memory...")
+        _loaded_models.clear()
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
 
     weights = _resolve_weights_dir()
     logger.info("Loading model %s (device=%s, weights_dir=%s) …", model_name, DEVICE, weights)

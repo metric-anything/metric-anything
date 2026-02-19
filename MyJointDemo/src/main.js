@@ -68,24 +68,13 @@ const tracker = createSquatTracker({
     // Capture scaled frame using our optimized client
     const frame = captureFrameBase64(video, { width: DEPTH_TARGET_WIDTH });
 
-    const leftKneePx = toPixel(joints.leftKnee, w, h);
-    const rightKneePx = toPixel(joints.rightKnee, w, h);
-
     // Dynamic targets based on phase
-    // Start = Body Depth (Shoulders)
-    // Bottom = Reach Depth (Wrists)
-    let targets;
-    if (phase === "start") {
-        targets = [
-            toPixel(joints.leftShoulder, w, h),
-            toPixel(joints.rightShoulder, w, h)
-        ];
-    } else {
-        targets = [
-            toPixel(joints.leftWrist, w, h),
-            toPixel(joints.rightWrist, w, h)
-        ];
-    }
+    // User Stat: "delta is the difference between start and end for the hand."
+    // So we track Wrists for BOTH phases now.
+    const targets = [
+        toPixel(joints.leftWrist, w, h),
+        toPixel(joints.rightWrist, w, h)
+    ];
 
     // IMPORTANT: We must scale the query points to match the resized image!
     queryDepthAtPoints(frame, [
@@ -93,14 +82,9 @@ const tracker = createSquatTracker({
       [Math.round(targets[1].x * scale), Math.round(targets[1].y * scale)],
     ])
       .then((result) => {
-        // Start: Average Shoulders
-        // Bottom: Min Wrist (Closest to camera)
-        let depthVal;
-        if (phase === "start") {
-             depthVal = (result.depths[0] + result.depths[1]) / 2;
-        } else {
-             depthVal = Math.min(result.depths[0], result.depths[1]);
-        }
+        // Always take the minimum depth (closest hand)
+        // This ensures we track the "active" reaching hand
+        const depthVal = Math.min(result.depths[0], result.depths[1]);
         tracker.setDepth(phase, depthVal);
 
         // Update latency display

@@ -19,14 +19,18 @@ get_hf_id() {
         dav2-base)       echo "depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf" ;;
         dav2-large)      echo "depth-anything/Depth-Anything-V2-Metric-Indoor-Large-hf" ;;
         metric-anything) echo "yjh001/metricanything_student_pointmap" ;;
-        qwen3-0.6b)      echo "__gguf__" ;;  # handled separately
+    qwen3-0.6b)      echo "__gguf__" ;;  # handled separately
+        qwen2.5-1.5b)    echo "__gguf__" ;;
+        qwen2.5-3b)      echo "__gguf__" ;;
         *) return 1 ;;
     esac
 }
 
-ALL_MODELS="dav2-small dav2-base dav2-large metric-anything qwen3-0.6b"
+ALL_MODELS="dav2-small dav2-base dav2-large metric-anything qwen3-0.6b qwen2.5-1.5b qwen2.5-3b"
 
 QWEN3_GGUF_URL="https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf"
+QWEN25_15B_GGUF_URL="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+QWEN25_3B_GGUF_URL="https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf"
 
 download_model() {
     local name="$1"
@@ -49,6 +53,14 @@ download_model() {
             qwen3-0.6b)
                 url="$QWEN3_GGUF_URL"
                 outfile="${dest}/Qwen3-0.6B-Q4_K_M.gguf"
+                ;;
+            qwen2.5-1.5b)
+                url="$QWEN25_15B_GGUF_URL"
+                outfile="${dest}/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+                ;;
+            qwen2.5-3b)
+                url="$QWEN25_3B_GGUF_URL"
+                outfile="${dest}/qwen2.5-3b-instruct-q4_k_m.gguf"
                 ;;
         esac
         echo "⬇ Downloading ${name} (GGUF) → ${outfile} …"

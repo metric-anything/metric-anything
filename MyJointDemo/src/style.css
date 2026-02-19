@@ -104,7 +104,23 @@ html, body {
 .top-bar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
+}
+
+.nav-link {
+  color: #ccc;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #333;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background: #444;
+  color: #fff;
 }
 
 .service-status {
@@ -193,7 +209,7 @@ html, body {
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 16px;
   gap: 16px;
 }
@@ -310,11 +326,14 @@ html, body {
 }
 
 .feedback-card.visible {
-  max-height: 800px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: 16px;
   opacity: 1;
   border-color: var(--border);
-  margin-top: 0; /* Gap is handled by parent flex gap usually, but let's see */
+  margin-top: 0;
 }
 
 .feedback-header {
@@ -355,7 +374,7 @@ html, body {
   font-size: 14px;
   line-height: 1.6;
   color: var(--text-primary);
-  max-height: 120px;
+  flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;

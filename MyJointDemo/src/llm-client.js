@@ -1,7 +1,7 @@
 /**
- * llm-client.js — OpenAI-compatible LLM client for coaching feedback
+ * llm-client.js — OpenAI-compatible LLM client
  *
- * Sends squat movement data to the LLM service and streams the response.
+ * Handles communication with the LLM service for both reach feedback and general chat.
  */
 
 // In production, requests are proxied through nginx (same origin, no CORS).
@@ -42,14 +42,31 @@ export async function getReachFeedback(reps, onChunk) {
 
   const userMessage = `Here is my reach gesture data for ${reps.length} reps:\n\n${userData}\n\nPlease analyze my reach performance.`;
 
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: userMessage },
+  ];
+
+  return sendChatMessage(messages, onChunk);
+}
+
+/**
+ * Send a general chat message to the LLM.
+ * 
+ * @param {Array<{role: string, content: string}>} messages 
+ * @param {function} onChunk - called with (chunk, fullText)
+ * @returns {Promise<string>}
+ */
+export async function sendChatMessage(messages, onChunk) {
+  // Qwen3-0.6B best practices (non-thinking mode)
   const body = {
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userMessage },
-    ],
+    messages,
     stream: true,
     temperature: 0.7,
-    max_tokens: 300,
+    top_p: 0.8,
+    top_k: 20,
+    min_p: 0,
+    presence_penalty: 1.5,   // reduces endless repetitions
   };
 
   const resp = await fetch(`${LLM_URL}/v1/chat/completions`, {
@@ -63,11 +80,19 @@ export async function getReachFeedback(reps, onChunk) {
     throw new Error(`LLM service error ${resp.status}: ${text}`);
   }
 
-  // Stream SSE response
+  return streamResponse(resp, onChunk);
+}
+
+/**
+ * Stream SSE response from OpenAI-compatible API
+ */
+async function streamResponse(resp, onChunk) {
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let fullText = "";
   let buffer = "";
+  let tokenCount = 0;
+  const startTime = performance.now();
 
   while (true) {
     const { done, value } = await reader.read();
@@ -88,8 +113,11 @@ export async function getReachFeedback(reps, onChunk) {
         const parsed = JSON.parse(data);
         const content = parsed.choices?.[0]?.delta?.content;
         if (content) {
+          tokenCount++;
           fullText += content;
-          if (onChunk) onChunk(content, fullText);
+          const elapsed = (performance.now() - startTime) / 1000;
+          const tps = elapsed > 0 ? (tokenCount / elapsed).toFixed(1) : 0;
+          if (onChunk) onChunk(content, fullText, { tokenCount, elapsed, tps: Number(tps) });
         }
       } catch {
         // skip malformed chunks
@@ -97,7 +125,8 @@ export async function getReachFeedback(reps, onChunk) {
     }
   }
 
-  return fullText;
+  const durationMs = performance.now() - startTime;
+  return { text: fullText, tokenCount, durationMs };
 }
 
 /**
@@ -113,3 +142,4 @@ export async function checkLLMHealth() {
     return { status: "unreachable" };
   }
 }
+
