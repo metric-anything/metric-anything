@@ -42,7 +42,7 @@ The backends must be running (see `../deploy/docker-compose.yml`).
 docker buildx build --platform linux/amd64 --load -t kinekernel/joint-demo:latest .
 
 # Transfer to mini PC
-docker save kinekernel/joint-demo:latest | gzip | ssh kk@192.168.0.236 'podman load'
+docker save kinekernel/joint-demo:latest | gzip | ssh kk@172.20.10.10 'podman load'
 ```
 
 ### Start all services on the mini PC
