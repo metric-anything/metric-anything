@@ -57,7 +57,7 @@ class MetricAnythingEstimator:
         self.dtype = torch.float16 if use_fp16 else torch.float32
 
         if weights_dir is not None:
-            model_path = Path(weights_dir) / "metric-anything"
+            model_path = Path(weights_dir) / "metric-anything" / "student_pointmap.pt"
             if not model_path.exists():
                 raise FileNotFoundError(
                     f"Local weights not found at {model_path}. "

@@ -8,6 +8,7 @@ services:
     environment:
       - DEPTH_WEIGHTS_DIR=/app/weights
       - DEPTH_DEVICE=cpu
+      - DEPTH_DEFAULT_MODEL=metric-anything
       - CPU_THREADS=6
     restart: unless-stopped
 
