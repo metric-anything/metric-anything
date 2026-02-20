@@ -97,6 +97,7 @@ class MetricAnythingEstimator:
                 img_tensor,
                 resolution_level=self.resolution_level,
                 use_fp16=use_fp16,
+                apply_mask=False,
             )
         return output["depth"].cpu().numpy()
 
