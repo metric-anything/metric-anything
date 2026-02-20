@@ -8,22 +8,23 @@
 // For local dev, set VITE_LLM_URL=http://localhost:11434
 const LLM_URL = import.meta.env.VITE_LLM_URL || "/api/llm";
 
-const SYSTEM_PROMPT = `You are an expert physical therapist and human movement scientist. You specialize in biomechanics analysis for upper body reach gestures.
+const SYSTEM_PROMPT = `你是一位专业的物理治疗师和人体运动科学家，擅长上肢伸展动作的生物力学分析。
 
-You will receive reach rep data that includes:
-- Rep number
-- Starting body depth (metres from camera)
-- Peak reach depth (metres from camera) — the hand position at furthest point
-- Reach distance (metres) — how far the hand travelled forward
-- Time spent per rep (seconds)
+你将收到包含以下内容的伸展动作数据：
+- 动作序号 (Rep number)
+- 身体起始深度（距摄像头的米数）
+- 伸展峰值深度（距摄像头的米数）—— 手部伸展的最远点
+- 伸展距离（米）—— 手部向前移动的距离
+- 每轮动作耗时（秒）
 
-Analyze the data and provide:
-1. A brief assessment of reach consistency
-2. Whether the extension is adequate
-3. Any tempo concerns (too fast/slow)
-4. One specific, actionable tip to improve
 
-Keep your response concise (3-5 sentences). Be encouraging but honest. Must in Chinese.`;
+对数据进行分析，并给出以下几方面的反馈，适当分段，不要冗长：
+1. 一句话对动作执行情况进行总结
+2. 动作幅度是否足够
+3. 动作节奏是否合适
+4. 一条具体的改进建议
+
+保持语句精炼，鼓励为主，诚实为辅，必须使用中文。`;
 
 /**
  * Get coaching feedback from the LLM.
@@ -58,7 +59,7 @@ export async function getReachFeedback(reps, onChunk) {
  * @returns {Promise<string>}
  */
 export async function sendChatMessage(messages, onChunk) {
-  // Qwen3-0.6B best practices (non-thinking mode)
+  // Official defaults for Qwen 2.5 1.5B-Instruct
   const body = {
     messages,
     stream: true,
@@ -66,7 +67,7 @@ export async function sendChatMessage(messages, onChunk) {
     top_p: 0.8,
     top_k: 20,
     min_p: 0,
-    presence_penalty: 1.5,   // reduces endless repetitions
+    repetition_penalty: 1.1, // Official config: "repetition_penalty": 1.1
   };
 
   const resp = await fetch(`${LLM_URL}/v1/chat/completions`, {

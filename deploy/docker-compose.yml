@@ -7,8 +7,8 @@ services:
       - ./weights:/app/weights:z
     environment:
       - DEPTH_WEIGHTS_DIR=/app/weights
-      - DEPTH_DEFAULT_MODEL=dav2-small
       - DEPTH_DEVICE=cpu
+      - CPU_THREADS=6
     restart: unless-stopped
 
   llm-service:
@@ -16,9 +16,9 @@ services:
     ports:
       - "11434:8080"
     volumes:
-      - ./weights/qwen3-0.6b:/models:z
+      - ./weights/qwen2.5-1.5b:/models:z
     command: >
-      -m /models/Qwen3-0.6B-Q4_K_M.gguf --host 0.0.0.0 --port 8080 -c 2048 -ngl 99
+      -m /models/qwen2.5-1.5b-instruct-q4_k_m.gguf --host 0.0.0.0 --port 8080 -c 1024 -ngl 99
     # Expose GPU to the container (Vulkan)
     devices:
       - /dev/dri
