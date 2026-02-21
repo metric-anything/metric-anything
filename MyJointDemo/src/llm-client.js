@@ -7,21 +7,18 @@
 // Requests are proxied through Vite in dev and Nginx in prod (same origin, no CORS).
 const LLM_URL = "/api/llm";
 
-const SYSTEM_PROMPT = `你是一位专业的物理治疗师和人体运动科学家，擅长上肢伸展动作的生物力学分析。
+const SYSTEM_PROMPT = `你是一位专业的物理治疗师和人体运动科学家，擅长人体各种动作的生物力学分析。
 
-你将收到包含以下内容的伸展动作数据：
+你将收到包含以下内容的动作数据：
 - 动作序号 (Rep number)
-- 身体起始深度（距摄像头的米数）
-- 伸展峰值深度（距摄像头的米数）—— 手部伸展的最远点
-- 伸展距离（米）—— 手部向前移动的距离
+- 动作起始深度（距摄像头的米数）
+- 动作峰值深度（距摄像头的米数）—— 动作到达的最远点
+- 动作距离（米）—— 动作移动的总距离
 - 每轮动作耗时（秒）
 
-
 对数据进行分析，并给出以下几方面的反馈，适当分段，不要冗长：
-1. 一句话对动作执行情况进行总结
-2. 动作幅度是否足够
-3. 动作节奏是否合适
-4. 一条具体的改进建议
+1. 一句话对动作执行情况进行总结，包含幅度、节奏等
+2. 一条具体的改进建议
 
 保持语句精炼，鼓励为主，诚实为辅，必须使用中文。`;
 
@@ -35,12 +32,12 @@ const SYSTEM_PROMPT = `你是一位专业的物理治疗师和人体运动科学
 export async function getReachFeedback(reps, onChunk) {
   const userData = reps.map((r) =>
     `Rep ${r.repNo}: start_body=${r.startDepth?.toFixed(3) ?? "N/A"}m, ` +
-    `peak_hand=${r.bottomDepth?.toFixed(3) ?? "N/A"}m, ` +
-    `reach_dist=${r.depthChange?.toFixed(3) ?? "N/A"}m, ` +
+    `peak_body=${r.bottomDepth?.toFixed(3) ?? "N/A"}m, ` +
+    `lean_dist=${r.depthChange?.toFixed(3) ?? "N/A"}m, ` +
     `time=${r.timeSpent}s`
   ).join("\n");
 
-  const userMessage = `Here is my reach gesture data for ${reps.length} reps:\n\n${userData}\n\nPlease analyze my reach performance.`;
+  const userMessage = `Here is my torso lean gesture data for ${reps.length} reps:\n\n${userData}\n\nPlease analyze my lean performance.`;
 
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
