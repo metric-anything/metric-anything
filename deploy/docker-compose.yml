@@ -36,8 +36,10 @@ services:
     image: kinekernel/joint-demo:latest
     ports:
       - "3000:80"
+    volumes:
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
     environment:
-      - LLM_MODEL=qwen2.5:1.5b
-      # Uncomment the line below when deploying to AlmaLinux with the linux-gpu profile
-      # - LLM_ENDPOINT=http://llm-service:8080
+      # Optional: Explicitly define the LLM model name.
+      # If left empty, AlmaLinux auto-detects from the Llama.cpp command below, and Mac/Windows auto-detects from local Ollama.
+      - LLM_MODEL=gemma3:1b
     restart: unless-stopped

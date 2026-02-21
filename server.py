@@ -173,10 +173,10 @@ async def depth_stream(websocket: WebSocket, model: Optional[str] = None):
     await websocket.accept()
     
     # We assume fixed dimensions for the raw stream as an optimization
-    # The client must send 640x360 RGB frames
+    # The client must send 640x360 RGBA frames now for frontend CPU efficiency
     FRAME_W = 640
     FRAME_H = 360
-    FRAME_CHANNELS = 3
+    FRAME_CHANNELS = 4 # RGBA
     EXPECTED_PIXEL_BYTES = FRAME_W * FRAME_H * FRAME_CHANNELS
     
     try:
@@ -213,7 +213,10 @@ async def depth_stream(websocket: WebSocket, model: Optional[str] = None):
             
             # Zero-copyish numpy view (readonly)
             frame_1d = np.frombuffer(pixel_data, dtype=np.uint8)
-            frame_rgb = frame_1d.reshape((FRAME_H, FRAME_W, FRAME_CHANNELS))
+            frame_rgba = frame_1d.reshape((FRAME_H, FRAME_W, FRAME_CHANNELS))
+            
+            # Drop the alpha channel instantly with numpy slicing
+            frame_rgb = frame_rgba[:, :, :3]
             
             # DEBUG: Save image to debug tracking accuracy
             # try:

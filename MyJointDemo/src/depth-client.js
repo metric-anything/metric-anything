@@ -167,13 +167,11 @@ export async function queryDepthAtPointsStream(video, points, model) {
   const imageData = captureCtx.getImageData(0, 0, DEPTH_TARGET_WIDTH, DEPTH_TARGET_HEIGHT);
   const rgba = imageData.data; // Uint8ClampedArray
   
-  const numPixels = DEPTH_TARGET_WIDTH * DEPTH_TARGET_HEIGHT;
-  
   // Protocol: 
-  // [2 bytes: N points] + [N * 4 bytes: coords] + [RGB pixels]
+  // [2 bytes: N points] + [N * 4 bytes: coords] + [RGBA pixels]
   const N = points.length;
   const headerBytes = 2 + (N * 4);
-  const bufferLength = headerBytes + (numPixels * 3);
+  const bufferLength = headerBytes + rgba.length;
   
   const arrayBuffer = new ArrayBuffer(bufferLength);
   const dataView = new DataView(arrayBuffer);
@@ -191,13 +189,9 @@ export async function queryDepthAtPointsStream(video, points, model) {
      offset += 2;
   }
   
-  // 3. Pack RGB pixels (skip alpha channel from RGBA)
-  let rgbIdx = headerBytes;
-  for (let i = 0; i < rgba.length; i += 4) {
-    uint8View[rgbIdx++] = rgba[i];     // R
-    uint8View[rgbIdx++] = rgba[i+1];   // G
-    uint8View[rgbIdx++] = rgba[i+2];   // B
-  }
+  // 3. Fast block-copy the entire RGBA array (no slow JS loops!)
+  // We let the backend python script drop the Alpha channel instead.
+  uint8View.set(rgba, headerBytes);
   
   return new Promise((resolve, reject) => {
     pendingResolvers.push(resolve);

@@ -20,8 +20,8 @@ export const STATE = {
 // Lean: Torso Z becomes more negative as you lean toward the camera 
 // (relative to hips root in MediaPipe).
 const LEAN_START_THRESHOLD = -0.04; 
-const LEAN_PEAK_THRESHOLD = -0.15;  
-const RETURN_THRESHOLD = -0.06;     
+const LEAN_PEAK_THRESHOLD = -0.25;  // Requires a deeper forward lean
+const RETURN_THRESHOLD = -0.10;     // Must return past this point to finish rep
 const MIN_REP_DURATION_MS = 500;
 
 /**

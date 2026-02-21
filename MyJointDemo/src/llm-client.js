@@ -59,7 +59,7 @@ export async function getReachFeedback(reps, onChunk) {
  */
 export async function sendChatMessage(messages, onChunk) {
   // Official defaults for Qwen 2.5 1.5B-Instruct
-  const currentModel = window.APP_CONFIG?.LLM_MODEL || "qwen3:0.6b";
+  const currentModel = window.APP_CONFIG?.LLM_MODEL || "qwen2.5:1.5b";
   
   const body = {
     model: currentModel,
@@ -134,15 +134,13 @@ async function streamResponse(resp, onChunk) {
 
 /**
  * Check if the LLM service is reachable.
- * @returns {Promise<{ status: string, active_model: string }>}
+ * @returns {Promise<{ status: string }>}
  */
 export async function checkLLMHealth() {
   try {
-    const resp = await fetch(`${LLM_URL}/`, { signal: AbortSignal.timeout(3000) });
+    const resp = await fetch(`${LLM_URL}/v1/models`, { signal: AbortSignal.timeout(3000) });
     if (!resp.ok) return { status: "error" };
-    
-    const currentModel = window.APP_CONFIG?.LLM_MODEL || "qwen3:0.6b";
-    return { status: "ok", active_model: currentModel };
+    return { status: "ok" };
   } catch {
     return { status: "unreachable" };
   }

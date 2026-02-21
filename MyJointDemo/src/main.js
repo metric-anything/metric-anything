@@ -111,7 +111,7 @@ const tracker = createSquatTracker({
 
 // ── LLM Feedback ──
 async function requestLLMFeedback(reps) {
-  showFeedback("Analyzing your squat form…", true);
+  showFeedback("Analyzing your movement…", true);
 
   try {
     await getReachFeedback(reps, (chunk, fullText) => {
@@ -132,10 +132,16 @@ async function requestLLMFeedback(reps) {
 
 // ── Health Checks ──
 async function checkServices() {
-  const [depthResult, llmResult] = await Promise.all([
+  const [depthResult, llmResultRaw] = await Promise.all([
     checkDepthHealth(),
     checkLLMHealth(),
   ]);
+  
+  const llmResult = { 
+    ...llmResultRaw, 
+    active_model: window.APP_CONFIG?.LLM_MODEL || "qwen2.5:1.5b" 
+  };
+  
   updateServiceStatus(depthResult, llmResult);
 }
 
@@ -212,10 +218,15 @@ async function init() {
 
     updateLoadingStatus("Waiting for backend services to boot…");
     while (true) {
-      const [depthResult, llmResult] = await Promise.all([
+      const [depthResult, llmResultRaw] = await Promise.all([
         checkDepthHealth(),
         checkLLMHealth(),
       ]);
+      
+      const llmResult = { 
+        ...llmResultRaw, 
+        active_model: window.APP_CONFIG?.LLM_MODEL || "qwen2.5:1.5b" 
+      };
       
       updateServiceStatus(depthResult, llmResult);
       
