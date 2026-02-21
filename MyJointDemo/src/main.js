@@ -12,7 +12,7 @@
 import "./style.css";
 import { initPose, detectPose, extractJoints, toPixel } from "./pose.js";
 import { createSquatTracker } from "./reach-joint.js";
-import { captureFrameBase64, queryDepthAtPoints, checkDepthHealth } from "./depth-client.js";
+import { queryDepthAtPointsStream, checkDepthHealth } from "./depth-client.js";
 import { getReachFeedback, checkLLMHealth } from "./llm-client.js";
 import {
   drawPoseOverlay,
@@ -57,45 +57,40 @@ const tracker = createSquatTracker({
     const w = video.videoWidth;
     const h = video.videoHeight;
 
-    // Optimization: Downscale image for depth service
-    // Most depth models work at ~518px internal resolution.
-    // 640px is a safe upper bound that saves huge bandwidth vs 1080p.
+    // Optimization: The depth-stream client automatically captures at 640x360
+    // We just need to scale our coordinates to match that 640x360 resolution bounding box
     const DEPTH_TARGET_WIDTH = 640;
+    const DEPTH_TARGET_HEIGHT = 360;
     
-    // Calculate scale factor if we need to resize
-    const scale = (w > DEPTH_TARGET_WIDTH) ? (DEPTH_TARGET_WIDTH / w) : 1.0;
+    // Calculate scale factor for coordinates
+    const scaleX = (w > DEPTH_TARGET_WIDTH) ? (DEPTH_TARGET_WIDTH / w) : 1.0;
+    const scaleY = (h > DEPTH_TARGET_HEIGHT) ? (DEPTH_TARGET_HEIGHT / h) : 1.0;
 
-    // Capture scaled frame using our optimized client
-    const frame = captureFrameBase64(video, { width: DEPTH_TARGET_WIDTH });
-
-    // Dynamic targets based on phase
-    // User Stat: "delta is the difference between start and end for the hand."
-    // So we track Wrists for BOTH phases now.
+    // Lean gesture: We always track Torso depth via shoulders for both start and peak phases
     const targets = [
-        toPixel(joints.leftWrist, w, h),
-        toPixel(joints.rightWrist, w, h)
+      toPixel(joints.leftShoulder, w, h),
+      toPixel(joints.rightShoulder, w, h)
     ];
 
-    // IMPORTANT: We must scale the query points to match the resized image!
-    queryDepthAtPoints(frame, [
-      [Math.round(targets[0].x * scale), Math.round(targets[0].y * scale)],
-      [Math.round(targets[1].x * scale), Math.round(targets[1].y * scale)],
-    ])
-      .then((result) => {
-        // Always take the minimum depth (closest hand)
-        // This ensures we track the "active" reaching hand
-        const depthVal = Math.min(result.depths[0], result.depths[1]);
-        tracker.setDepth(phase, depthVal);
+    // Scale query points to match the 640x360 resized stream image
+    const scaledPoints = targets.map(t => [
+       Math.round(t.x * scaleX), 
+       Math.round(t.y * scaleY)
+    ]);
 
-        // Update latency display
-        const latencyEl = document.getElementById("latency");
-        if (latencyEl) latencyEl.textContent = `${result.inference_ms.toFixed(0)}ms`;
+    queryDepthAtPointsStream(video, scaledPoints, null)
+      .then((result) => {
+        // Average or Min? For shoulders (start), they should be similar, take min.
+        // For wrist (bottom), there's only 1 point.
+        let depthVal = result.depths[0];
+        if (result.depths.length > 1) {
+           depthVal = Math.min(result.depths[0], result.depths[1]);
+        }
+        
+        tracker.setDepth(phase, depthVal);
       })
       .catch((err) => {
-        console.warn(`Depth query failed (${phase}):`, err.message);
-      })
-      .finally(() => {
-         // depthInFlight = false; // concurrency check removed
+        console.warn(`Depth stream failed (${phase}):`, err.message);
       });
   },
 
@@ -182,15 +177,14 @@ function renderLoop(timestamp) {
     : null;
 
   // Draw overlay
-  drawPoseOverlay(ctx, canvas, poseResult.landmarks, joints, kneeDepths);
+  drawPoseOverlay(ctx, canvas, poseResult.landmarks, joints, kneeDepths, tracker.getState());
 
   // Update stats panel
   updateStatsPanel(
     tracker.getState(),
     tracker.getRepCount(),
     REPS_PER_SET,
-    depths,
-    null, // latency updated separately by depth callback
+    depths
   );
 
   // Update state badge

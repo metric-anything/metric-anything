@@ -9,18 +9,19 @@
 
 // ── States ──
 export const STATE = {
-  IDLE: "IDLE",             // waiting for subject / W-pose
-  RESET: "RESET",           // "W" pose detected (Ready)
-  REACHING: "REACHING",     // Hand moving forward
-  REACHED: "REACHED",       // Peak reach (trigger depth)
-  RETURNING: "RETURNING",   // Hand moving back
+  IDLE: "IDLE",             // building baseline
+  RESET: "RESET",           // Ready (Sitting Back)
+  REACHING: "REACHING",     // Leaning forward
+  REACHED: "REACHED",       // Peak lean
+  RETURNING: "RETURNING",   // Returning
 };
 
 // ── Thresholds ──
-// "W" Pose: Wrist Y must be < Elbow Y (higher on screen)
-// Reach: Wrist Z must be significantly less than Shoulder Z (closer to camera)
-const REACH_THRESHOLD = -0.15; // Wrist Z is this much closer than Shoulder Z
-const RETURN_THRESHOLD = -0.05; // Wrist Z is moving back to Shoulder Z
+// Lean: Torso Z becomes more negative as you lean toward the camera 
+// (relative to hips root in MediaPipe).
+const LEAN_START_THRESHOLD = -0.04; 
+const LEAN_PEAK_THRESHOLD = -0.15;  
+const RETURN_THRESHOLD = -0.06;     
 const MIN_REP_DURATION_MS = 500;
 
 /**
@@ -40,6 +41,8 @@ export function createSquatTracker(opts = {}) {
   let repStartTime = null;
   let startDepth = null;
   let bottomDepth = null; // reused "bottom" for "reach" depth
+  let baselineZ = null;
+  let idleFrames = 0;
 
   function setState(newState) {
     if (newState !== state) {
@@ -60,71 +63,57 @@ export function createSquatTracker(opts = {}) {
       return;
     }
 
-    const {
-      leftShoulder, rightShoulder,
-      leftElbow, rightElbow,
-      leftWrist, rightWrist
-    } = joints;
+    const { leftShoulder, rightShoulder } = joints;
+    const currentZ = (leftShoulder.z + rightShoulder.z) / 2;
 
-    // Helper: Check if a side is in "W" pose (Wrist above Elbow)
-    // Note: Y increases downward in screen coords (0=top)
-    // So Wrist.y < Elbow.y means Wrist is higher visually (like hands up)
-    const leftIsUp = leftWrist.y < leftElbow.y;
-    const rightIsUp = rightWrist.y < rightElbow.y;
-
-    // Helper: Calculate Z-depth relative to shoulder (negative = closer to camera)
-    // MediaPipe World Landmarks: Z is meters, origin at hip center usually.
-    // Use relative Z to shoulder to be robust to body position.
-    const leftReachZ = leftWrist.z - leftShoulder.z;
-    const rightReachZ = rightWrist.z - rightShoulder.z;
-
-    // Active hand: usually the one reaching further (min Z)
-    const activeReachZ = Math.min(leftReachZ, rightReachZ);
+    if (baselineZ === null) {
+      baselineZ = currentZ;
+    }
+    const deltaZ = currentZ - baselineZ;
 
     switch (state) {
       case STATE.IDLE:
-      case STATE.RESET: // "W" Pose
-        // Ideally both hands up, but at least one for flexibility? Let's say both for "W".
-        if (leftIsUp && rightIsUp) {
-            if (state !== STATE.RESET) setState(STATE.RESET);
-            
-            // Check for Reach start
-            if (activeReachZ < REACH_THRESHOLD) {
-                repStartTime = now;
-                setState(STATE.REACHING);
-                onDepthRequest("start", joints); // Request "start" depth (torso/shoulder)
-            }
+        // Update baseline slowly (leaky integrator)
+        baselineZ = 0.9 * baselineZ + 0.1 * currentZ;
+        if (Math.abs(deltaZ) < 0.05) {
+           idleFrames++;
+           if (idleFrames > 10) setState(STATE.RESET);
         } else {
-            setState(STATE.IDLE);
+           idleFrames = 0;
+        }
+        break;
+
+      case STATE.RESET:
+        // Keep gently updating baseline while sitting back
+        baselineZ = 0.95 * baselineZ + 0.05 * currentZ;
+        
+        if (deltaZ < LEAN_START_THRESHOLD) {
+            repStartTime = now;
+            setState(STATE.REACHING);
+            onDepthRequest("start", joints); // Request "start" depth (Torso)
         }
         break;
 
       case STATE.REACHING:
-        // We are reaching out. Wait for peak or just transition to REACHED?
-        // Let's transition to REACHED immediately when threshold passed, 
-        // effectively treating "Reaching" as "Descending".
-        // Actually, let's just trigger REACHED when deep enough.
-        if (activeReachZ < REACH_THRESHOLD) {
+        if (deltaZ < LEAN_PEAK_THRESHOLD) {
              setState(STATE.REACHED);
-             // Request "reach" depth (hand) immediately upon reaching threshold
-             console.log("Peak reach detected, requesting depth...", { activeReachZ });
-             onDepthRequest("bottom", joints); 
-        } else if (activeReachZ > RETURN_THRESHOLD) {
-            // Aborted reach
+             console.log("Peak lean detected, requesting depth...", { deltaZ });
+             onDepthRequest("bottom", joints); // Peak depth
+        } else if (deltaZ > (LEAN_START_THRESHOLD / 2)) {
+            // Aborted lean
             setState(STATE.RESET);
         }
         break;
 
       case STATE.REACHED:
-        // User is holding reach or returning.
-        if (activeReachZ > RETURN_THRESHOLD) {
+        if (deltaZ > RETURN_THRESHOLD) {
             setState(STATE.RETURNING);
         }
         break;
 
       case STATE.RETURNING:
-        // Check if back to W pose
-        if ((leftIsUp && rightIsUp) && activeReachZ > RETURN_THRESHOLD) {
+        // Check if returned AND we've securely received the bottom depth from the network
+        if (deltaZ > RETURN_THRESHOLD && bottomDepth !== null) {
            // Rep complete
            const elapsed = now - (repStartTime || now);
            if (elapsed >= MIN_REP_DURATION_MS) {
@@ -170,7 +159,15 @@ export function createSquatTracker(opts = {}) {
   function getState() { return state; }
   function getRepCount() { return repCount; }
   function getReps() { return [...reps]; }
-  function getCurrentDepths() { return { startDepth, bottomDepth }; }
+  function getCurrentDepths() { 
+     let timeSpent = null;
+     if (state === STATE.REACHING || state === STATE.REACHED || state === STATE.RETURNING) {
+        if (repStartTime) {
+           timeSpent = (performance.now() - repStartTime) / 1000;
+        }
+     }
+     return { startDepth, bottomDepth, timeSpent }; 
+  }
   function reset() {
     state = STATE.IDLE;
     repCount = 0;
@@ -178,6 +175,8 @@ export function createSquatTracker(opts = {}) {
     repStartTime = null;
     startDepth = null;
     bottomDepth = null;
+    baselineZ = null;
+    idleFrames = 0;
   }
 
   return {

@@ -14,17 +14,19 @@ Environment variables
     DEPTH_DEVICE        PyTorch device (default: cpu)
 """
 
+import asyncio
 import base64
 import io
 import logging
 import os
 import time
 import gc
+import struct
 from typing import List, Optional, Tuple
 
 import torch
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from PIL import Image
 from pydantic import BaseModel
 
@@ -225,3 +227,95 @@ async def switch_model(req: ModelSwitchRequest):
     _active_model = req.model
     logger.info("Switched active model to %s", _active_model)
     return {"status": "ok", "active_model": _active_model}
+
+
+@app.websocket("/depth/stream")
+async def depth_stream(websocket: WebSocket, model: Optional[str] = None):
+    """
+    WebSocket endpoint for zero-latency depth estimation.
+    Expects binary messages:
+      - Bytes 0-7: 4 uint16 values (x1, y1, x2, y2)
+      - Bytes 8+: Raw RGB pixel data (width=640, height=360, 3 channels)
+    """
+    await websocket.accept()
+    
+    # We assume fixed dimensions for the raw stream as an optimization
+    # The client must send 640x360 RGB frames
+    FRAME_W = 640
+    FRAME_H = 360
+    FRAME_CHANNELS = 3
+    EXPECTED_PIXEL_BYTES = FRAME_W * FRAME_H * FRAME_CHANNELS
+    
+    try:
+        estimator, model_name = _get_estimator(model)
+        
+        while True:
+            data = await websocket.receive_bytes()
+            
+            t0 = time.perf_counter()
+            
+            if len(data) < 2:
+                await websocket.send_json({"error": "Message too short for header"})
+                continue
+                
+            num_points = struct.unpack('<H', data[:2])[0]
+            header_bytes = 2 + (num_points * 4)
+            
+            if len(data) < header_bytes:
+                await websocket.send_json({"error": "Message too short for coordinates"})
+                continue
+                
+            points = []
+            offset = 2
+            for _ in range(num_points):
+                x, y = struct.unpack('<HH', data[offset:offset+4])
+                points.append((x, y))
+                offset += 4
+            
+            # Parse image
+            pixel_data = data[header_bytes:]
+            if len(pixel_data) != EXPECTED_PIXEL_BYTES:
+                await websocket.send_json({"error": f"Invalid pixel data size: expected {EXPECTED_PIXEL_BYTES}, got {len(pixel_data)}"})
+                continue
+            
+            # Zero-copyish numpy view (readonly)
+            frame_1d = np.frombuffer(pixel_data, dtype=np.uint8)
+            frame_rgb = frame_1d.reshape((FRAME_H, FRAME_W, FRAME_CHANNELS))
+            
+            # DEBUG: Save image to debug tracking accuracy
+            # try:
+            #     import cv2
+            #     # Convert RGB to BGR for cv2
+            #     bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+            #     for pt in points:
+            #         cv2.circle(bgr, pt, 5, (0, 0, 255), -1) # Red dot at target
+                
+            #     phase_name = "start" if num_points == 2 else "bottom" if num_points == 1 else "unknown"
+            #     ts = int(time.time() * 1000)
+            #     filename = f"debug_{phase_name}_{ts}.jpg"
+            #     cv2.imwrite(filename, bgr)
+            #     logger.info(f"Saved debug frame: {filename}")
+            # except Exception as e:
+            #     logger.error(f"Failed to save debug frame: {e}")
+            
+            # Run inference in a background thread to prevent blocking FastAPI event loop
+            depths = await asyncio.to_thread(estimator.estimate_at_points, frame_rgb, points)
+            
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            
+            await websocket.send_json({
+                "depths": depths,
+                "model": model_name,
+                "inference_ms": round(elapsed_ms, 1)
+            })
+            
+    except WebSocketDisconnect:
+        logger.info("Client disconnected from depth stream")
+    except Exception as exc:
+        logger.error(f"WebSocket error: {exc}")
+        try:
+            await websocket.send_json({"error": str(exc)})
+            await websocket.close(code=1011)
+        except:
+            pass
+

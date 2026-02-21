@@ -4,9 +4,8 @@
  * Handles communication with the LLM service for both reach feedback and general chat.
  */
 
-// In production, requests are proxied through nginx (same origin, no CORS).
-// For local dev, set VITE_LLM_URL=http://localhost:11434
-const LLM_URL = import.meta.env.VITE_LLM_URL || "/api/llm";
+// Requests are proxied through Vite in dev and Nginx in prod (same origin, no CORS).
+const LLM_URL = "/api/llm";
 
 const SYSTEM_PROMPT = `你是一位专业的物理治疗师和人体运动科学家，擅长上肢伸展动作的生物力学分析。
 
@@ -61,6 +60,7 @@ export async function getReachFeedback(reps, onChunk) {
 export async function sendChatMessage(messages, onChunk) {
   // Official defaults for Qwen 2.5 1.5B-Instruct
   const body = {
+    model: "qwen2.5:0.5b",
     messages,
     stream: true,
     temperature: 0.7,
@@ -136,7 +136,7 @@ async function streamResponse(resp, onChunk) {
  */
 export async function checkLLMHealth() {
   try {
-    const resp = await fetch(`${LLM_URL}/health`, { signal: AbortSignal.timeout(3000) });
+    const resp = await fetch(`${LLM_URL}/`, { signal: AbortSignal.timeout(3000) });
     if (!resp.ok) return { status: "error" };
     return { status: "ok" };
   } catch {

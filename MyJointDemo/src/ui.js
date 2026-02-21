@@ -10,6 +10,9 @@ import { STATE } from "./reach-joint.js";
 
 let drawingUtils = null;
 
+// Latch values so they stay on screen between reps
+const lastRecs = { start: null, bottom: null, change: null, time: null };
+
 // ── Colour palette ──
 const COLORS = {
   accent: "#00e5ff",
@@ -24,17 +27,17 @@ const COLORS = {
 };
 
 const STATE_LABELS = {
-  [STATE.IDLE]: { text: "Waiting for pose…", color: COLORS.textSecondary },
-  [STATE.RESET]: { text: "Ready (W-Pose)", color: COLORS.success },
-  [STATE.REACHING]: { text: "Reaching…", color: COLORS.accent },
-  [STATE.REACHED]: { text: "Target Reached!", color: COLORS.warning },
-  [STATE.RETURNING]: { text: "Returning…", color: COLORS.accent },
+  [STATE.IDLE]: { text: "Locating Torso…", color: COLORS.textSecondary },
+  [STATE.RESET]: { text: "Ready (Sit Back)", color: COLORS.success },
+  [STATE.REACHING]: { text: "Leaning Forward…", color: COLORS.accent },
+  [STATE.REACHED]: { text: "Peak Lean Reached!", color: COLORS.warning },
+  [STATE.RETURNING]: { text: "Returning to Start…", color: COLORS.accent },
 };
 
 /**
  * Draw the pose skeleton + knee depth labels onto the canvas.
  */
-export function drawPoseOverlay(ctx, canvas, landmarks, joints, depths) {
+export function drawPoseOverlay(ctx, canvas, landmarks, joints, depths, state) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (!landmarks) return;
@@ -64,8 +67,6 @@ export function drawPoseOverlay(ctx, canvas, landmarks, joints, depths) {
     const markers = [
       { joint: joints.leftShoulder, label: "LS", color: COLORS.success }, // Body
       { joint: joints.rightShoulder, label: "RS", color: COLORS.success },
-      { joint: joints.leftWrist, label: "LW", color: COLORS.accent },    // Reach
-      { joint: joints.rightWrist, label: "RW", color: COLORS.accent },
     ];
 
     markers.forEach(({ joint, label, color }, i) => {
@@ -89,6 +90,14 @@ export function drawPoseOverlay(ctx, canvas, landmarks, joints, depths) {
       ctx.fillText(label, px + 12, py + 4);
     });
   }
+
+  // Visual clue border showing the current phase
+  if (state) {
+     const sl = STATE_LABELS[state] || STATE_LABELS[STATE.IDLE];
+     ctx.strokeStyle = sl.color;
+     ctx.lineWidth = 12;
+     ctx.strokeRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 // Cache DOM elements to avoid lookups every frame
@@ -98,7 +107,7 @@ const uiCache = {
   startDepthEl: null,
   bottomDepthEl: null,
   changeEl: null,
-  latencyEl: null,
+  timeEl: null,
 };
 
 function getUiElements() {
@@ -108,7 +117,7 @@ function getUiElements() {
     uiCache.startDepthEl = document.getElementById("start-depth");
     uiCache.bottomDepthEl = document.getElementById("bottom-depth");
     uiCache.changeEl = document.getElementById("depth-change");
-    uiCache.latencyEl = document.getElementById("latency");
+    uiCache.timeEl = document.getElementById("time-spent");
   }
   return uiCache;
 }
@@ -116,8 +125,8 @@ function getUiElements() {
 /**
  * Update the stats panel in the DOM.
  */
-export function updateStatsPanel(state, repCount, repsPerSet, depths, latency) {
-  const { stateEl, repEl, startDepthEl, bottomDepthEl, changeEl, latencyEl } = getUiElements();
+export function updateStatsPanel(state, repCount, repsPerSet, depths) {
+  const { stateEl, repEl, startDepthEl, bottomDepthEl, changeEl, timeEl } = getUiElements();
 
   const sl = STATE_LABELS[state] || STATE_LABELS[STATE.IDLE];
   if (stateEl) {
@@ -127,27 +136,53 @@ export function updateStatsPanel(state, repCount, repsPerSet, depths, latency) {
 
   if (repEl) repEl.textContent = `${repCount} / ${repsPerSet}`;
 
+  // Update latched values
+  if (depths.startDepth != null) lastRecs.start = depths.startDepth;
+  if (depths.bottomDepth != null) {
+    lastRecs.bottom = depths.bottomDepth;
+    if (lastRecs.start != null) {
+      lastRecs.change = lastRecs.start - lastRecs.bottom;
+    }
+  }
+  if (depths.timeSpent != null) lastRecs.time = depths.timeSpent;
+
+  // Clear old bottom/time metrics when a new reach actually begins
+  if (state === STATE.REACHING && depths.bottomDepth == null) {
+    lastRecs.bottom = null;
+    lastRecs.change = null;
+    lastRecs.time = null;
+  }
+  
+  // If we reset entirely (e.g. tracking lost)
+  if (state === STATE.IDLE) {
+    lastRecs.start = null;
+    lastRecs.bottom = null;
+    lastRecs.change = null;
+    lastRecs.time = null;
+  }
+
   if (startDepthEl) {
-    startDepthEl.textContent = depths.startDepth != null
-      ? `${depths.startDepth.toFixed(3)}m` : "—";
+    startDepthEl.textContent = lastRecs.start != null
+      ? `${lastRecs.start.toFixed(3)}m` : "—";
   }
+  
   if (bottomDepthEl) {
-    bottomDepthEl.textContent = depths.bottomDepth != null
-      ? `${depths.bottomDepth.toFixed(3)}m` : "—";
+    bottomDepthEl.textContent = lastRecs.bottom != null
+      ? `${lastRecs.bottom.toFixed(3)}m` : "—";
   }
+  
   if (changeEl) {
-    if (depths.startDepth != null && depths.bottomDepth != null) {
-      const change = depths.bottomDepth - depths.startDepth;
-      changeEl.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(3)}m`;
-      changeEl.style.color = change < 0 ? COLORS.success : COLORS.warning;
+    if (lastRecs.change != null) {
+      changeEl.textContent = `${lastRecs.change > 0 ? "+" : ""}${lastRecs.change.toFixed(3)}m`;
+      changeEl.style.color = COLORS.accent;
     } else {
       changeEl.textContent = "—";
       changeEl.style.color = COLORS.textSecondary;
     }
   }
 
-  if (latencyEl) {
-    latencyEl.textContent = latency != null ? `${latency.toFixed(0)}ms` : "—";
+  if (timeEl) {
+     timeEl.textContent = lastRecs.time != null ? `${lastRecs.time.toFixed(2)}s` : "—";
   }
 }
 

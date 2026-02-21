@@ -28,8 +28,7 @@ The backends must be running (see `../deploy/docker-compose.yml`).
 
 | Variable | Default | Description |
 | ---------- | --------- | ------------- |
-| `VITE_DEPTH_URL` | `http://localhost:8081` | Depth service URL |
-| `VITE_LLM_URL` | `http://localhost:11434` | LLM service URL |
+| `VITE_BACKEND_IP` | `127.0.0.1` | Local or remote prod IP for Vite proxy to route `/api` calls |
 | `VITE_REPS_PER_SET` | `5` | Reps before LLM feedback |
 | `VITE_DEPTH_MODEL` | `dav2-small` | Depth model to use |
 
