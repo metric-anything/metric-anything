@@ -136,7 +136,7 @@ async function checkServices() {
     checkDepthHealth(),
     checkLLMHealth(),
   ]);
-  updateServiceStatus(depthResult.status, llmResult.status);
+  updateServiceStatus(depthResult, llmResult);
 }
 
 // ── Main Loop ──
@@ -210,8 +210,27 @@ async function init() {
     updateLoadingStatus("Loading pose model…");
     await initPose();
 
-    updateLoadingStatus("Checking backend services…");
-    await checkServices();
+    updateLoadingStatus("Waiting for backend services to boot…");
+    while (true) {
+      const [depthResult, llmResult] = await Promise.all([
+        checkDepthHealth(),
+        checkLLMHealth(),
+      ]);
+      
+      updateServiceStatus(depthResult, llmResult);
+      
+      if (depthResult.status === "ok" && llmResult.status === "ok") {
+        break;
+      }
+      
+      let waitingMsg = "Waiting for services...";
+      if (depthResult.status !== "ok" && llmResult.status === "ok") waitingMsg = "Waiting for Depth Service (loading PyTorch models)...";
+      if (depthResult.status === "ok" && llmResult.status !== "ok") waitingMsg = "Waiting for LLM Service (loading weights)...";
+      if (depthResult.status !== "ok" && llmResult.status !== "ok") waitingMsg = "Waiting for Depth & LLM Services to boot...";
+      
+      updateLoadingStatus(waitingMsg);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
 
     // Periodic health checks
     setInterval(checkServices, 10000);

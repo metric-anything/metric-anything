@@ -241,17 +241,34 @@ export function hideFeedback() {
 /**
  * Update the service status indicators.
  */
-export function updateServiceStatus(depthStatus, llmStatus) {
+export function updateServiceStatus(depthResult, llmResult) {
   const depthEl = document.getElementById("depth-status");
   const llmEl = document.getElementById("llm-status");
+
+  // depthResult / llmResult can be strings (old api) or objects (new api)
+  const depthStatus = typeof depthResult === "string" ? depthResult : depthResult?.status || "error";
+  const llmStatus = typeof llmResult === "string" ? llmResult : llmResult?.status || "error";
+  
+  const depthModel = depthResult?.active_model || "";
+  const llmModel = llmResult?.active_model || "";
 
   if (depthEl) {
     depthEl.className = `status-dot ${depthStatus === "ok" ? "status-ok" : "status-err"}`;
     depthEl.title = `Depth: ${depthStatus}`;
+    
+    const labelSpan = depthEl.nextElementSibling;
+    if (labelSpan) {
+      labelSpan.textContent = depthModel ? `Depth (${depthModel})` : "Depth";
+    }
   }
   if (llmEl) {
     llmEl.className = `status-dot ${llmStatus === "ok" ? "status-ok" : "status-err"}`;
     llmEl.title = `LLM: ${llmStatus}`;
+    
+    const labelSpan = llmEl.nextElementSibling;
+    if (labelSpan) {
+      labelSpan.textContent = llmModel ? `LLM (${llmModel})` : "LLM";
+    }
   }
 }
 

@@ -37,5 +37,7 @@ services:
     ports:
       - "3000:80"
     environment:
-      - LLM_MODEL=qwen3:0.6b-q4_K_M
+      - LLM_MODEL=qwen2.5:1.5b
+      # Uncomment the line below when deploying to AlmaLinux with the linux-gpu profile
+      # - LLM_ENDPOINT=http://llm-service:8080
     restart: unless-stopped

@@ -21,13 +21,17 @@ server {
     }
 
     # Reverse proxy: LLM service (avoids CORS)
-    # Routes to the host machine's Ollama instance (11434) by default
     location /api/llm/ {
-        proxy_pass http://host.docker.internal:11434/;
+        proxy_pass ${LLM_ENDPOINT}/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_read_timeout 120s;
         proxy_buffering off;       # needed for SSE streaming
+    }
+
+    # Do not cache the dynamic runtime config
+    location = /config.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
     }
 
     # Cache static assets
