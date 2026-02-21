@@ -1,17 +1,17 @@
 # My Joint Demo
 
-Real-time **Reach Gesture** analysis with metric depth measurement and AI coaching feedback. Built as a lightweight frontend demo for testing the MetricAnything **depth service** and **LLM service** backend responsiveness.
+Real-time **Torso Lean Gesture** analysis with metric depth measurement and AI coaching feedback. Built as a lightweight frontend demo for testing the MetricAnything **depth service** and **LLM service** backend responsiveness.
 
 ## How It Works
 
 1. **Webcam** captures live video in the browser.
-2. **MediaPipe Pose** (runs client-side) detects upper body landmarks (Shoulders, Elbows, Wrists).
-3. **Reach State Machine** tracks the gesture:
-    - **Start**: "W" Pose (Sitting, elbows down, hands up).
-    - **Action**: Reach forward with one hand.
-    - **End**: Return to "W" pose.
-4. At key moments (Start/Peak Reach), the **depth service** is queried for metric depth of the **Shoulder** (body) and **Wrist** (reach target).
-5. After 5 reps, movement data is sent to the **LLM** (Qwen3 0.6B) for coaching feedback.
+2. **MediaPipe Pose** (runs client-side) detects upper body landmarks (specifically the Shoulders).
+3. **Lean State Machine** tracks the gesture using relative Z-coordinates (distance to camera):
+    - **Start**: "Ready" Pose (Sitting back in the chair).
+    - **Action**: Lean your trunk forward towards the camera.
+    - **End**: Return to the sitting position.
+4. At key moments (Start/Peak Lean), an optimized **binary WebSocket** streams RGB crop data to the **depth service** to measure the exact depth of the user's **Shoulders** (body).
+5. After 5 reps, movement data is sent to the **LLM** (e.g. Qwen) for coaching feedback.
 
 ## Quick Start (development)
 

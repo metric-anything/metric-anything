@@ -20,4 +20,3 @@ git+https://github.com/EasternJournalist/utils3d.git@3fab839f0be9931dac7c8488eb0
 # Server
 fastapi
 uvicorn[standard]
-python-multipart

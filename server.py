@@ -15,8 +15,6 @@ Environment variables
 """
 
 import asyncio
-import base64
-import io
 import logging
 import os
 import time
@@ -27,7 +25,6 @@ from typing import List, Optional, Tuple
 import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from PIL import Image
 from pydantic import BaseModel
 
 from depth import DAv2Estimator, MetricAnythingEstimator
@@ -45,31 +42,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")
 # ─────────────────────────────────────────────
 # Pydantic schemas
 # ─────────────────────────────────────────────
-
-class DepthPointsRequest(BaseModel):
-    image_base64: str
-    points: List[Tuple[int, int]]
-    model: Optional[str] = None  # override per-request
-
-
-class DepthPointsResponse(BaseModel):
-    depths: List[float]
-    model: str
-    inference_ms: float
-
-
-class DepthMapRequest(BaseModel):
-    image_base64: str
-    model: Optional[str] = None
-
-
-class DepthMapResponse(BaseModel):
-    depth_map_base64: str  # base64-encoded 32-bit float raw bytes
-    width: int
-    height: int
-    model: str
-    inference_ms: float
-
 
 class ModelSwitchRequest(BaseModel):
     model: str
@@ -175,45 +147,6 @@ async def health():
         status="ok",
         active_model=_active_model,
         available_models=AVAILABLE_MODELS,
-    )
-
-
-@app.post("/depth/points", response_model=DepthPointsResponse)
-async def depth_points(req: DepthPointsRequest):
-    """Return metric depth values at specific pixel coordinates."""
-    estimator, model_name = _get_estimator(req.model)
-    frame_rgb = _decode_image(req.image_base64)
-
-    t0 = time.perf_counter()
-    depths = estimator.estimate_at_points(frame_rgb, req.points)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
-
-    return DepthPointsResponse(
-        depths=depths,
-        model=model_name,
-        inference_ms=round(elapsed_ms, 1),
-    )
-
-
-@app.post("/depth/map", response_model=DepthMapResponse)
-async def depth_map(req: DepthMapRequest):
-    """Return the full depth map as base64-encoded float32 bytes."""
-    estimator, model_name = _get_estimator(req.model)
-    frame_rgb = _decode_image(req.image_base64)
-
-    t0 = time.perf_counter()
-    depth = estimator.estimate(frame_rgb)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
-
-    depth_bytes = depth.astype(np.float32).tobytes()
-    depth_b64 = base64.b64encode(depth_bytes).decode("ascii")
-
-    return DepthMapResponse(
-        depth_map_base64=depth_b64,
-        width=depth.shape[1],
-        height=depth.shape[0],
-        model=model_name,
-        inference_ms=round(elapsed_ms, 1),
     )
 
 

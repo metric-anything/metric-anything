@@ -4,11 +4,20 @@ WORKDIR /app
 
 # Install system deps for OpenCV (needed by some transforms)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgl1 libglib2.0-0 git && \
+    apt-get install -y --no-install-recommends libgl1 libglib2.0-0 git g++ libx11-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# Provide architecture argument from buildx
+ARG TARGETARCH
+
 # Layer 1: Heavy deps (torch ~200MB CPU-only) — cached unless version changes
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# For amd64, we MUST use the CPU index to avoid downloading 3GB+ of CUDA libraries.
+# For arm64 (Apple Silicon), PyPI's default index correctly provides CPU-only Linux wheels.
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+    pip install --no-cache-dir torch torchvision; \
+    fi
 
 # Layer 2: Remaining deps — rebuilds faster on changes
 COPY requirements.txt .

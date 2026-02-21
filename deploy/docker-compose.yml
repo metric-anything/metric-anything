@@ -8,11 +8,12 @@ services:
     environment:
       - DEPTH_WEIGHTS_DIR=/app/weights
       - DEPTH_DEVICE=cpu
-      - DEPTH_DEFAULT_MODEL=metric-anything
-      - CPU_THREADS=6
+      - DEPTH_DEFAULT_MODEL=dav2-small
     restart: unless-stopped
 
   llm-service:
+    profiles:
+      - linux-gpu
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
     ports:
       - "11434:8080"
@@ -35,4 +36,6 @@ services:
     image: kinekernel/joint-demo:latest
     ports:
       - "3000:80"
+    environment:
+      - LLM_MODEL=qwen3:0.6b-q4_K_M
     restart: unless-stopped

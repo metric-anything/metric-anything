@@ -59,8 +59,10 @@ export async function getReachFeedback(reps, onChunk) {
  */
 export async function sendChatMessage(messages, onChunk) {
   // Official defaults for Qwen 2.5 1.5B-Instruct
+  const currentModel = window.APP_CONFIG?.LLM_MODEL || "qwen2.5:0.5b";
+  
   const body = {
-    model: "qwen2.5:0.5b",
+    model: currentModel,
     messages,
     stream: true,
     temperature: 0.7,

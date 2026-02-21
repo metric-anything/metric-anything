@@ -41,48 +41,23 @@ curl http://localhost:8081/health
 }
 ```
 
-### `POST /depth/points`
+### `WebSocket /depth/stream`
 
-Get metric depth (metres) at specific pixel coordinates.
+Real-time streaming endpoint for high-performance depth estimation. Bypasses Base64 and JPEG overhead.
 
-```bash
-curl -X POST http://localhost:8081/depth/points \
-  -H "Content-Type: application/json" \
-  -d '{
-    "image_base64": "<base64-encoded JPEG>",
-    "points": [[640, 360], [500, 200]],
-    "model": "dav2-small"
-  }'
-```
+**Client -> Server (Binary Buffer):**
+
+- `[2 bytes: N]` (number of coordinates)
+- `[N * 4 bytes]` (X, Y 16-bit integers)
+- `[RGB Pixels]` (Raw RGB image bytes)
+
+**Server -> Client (JSON):**
 
 ```json
 {
-  "depths": [0.6523, 3.1245],
+  "depths": [0.652, 0.640],
   "model": "dav2-small",
-  "inference_ms": 450.2
-}
-```
-
-### `POST /depth/map`
-
-Get the full depth map as base64-encoded float32 bytes.
-
-```bash
-curl -X POST http://localhost:8081/depth/map \
-  -H "Content-Type: application/json" \
-  -d '{
-    "image_base64": "<base64-encoded JPEG>",
-    "model": "dav2-small"
-  }'
-```
-
-```json
-{
-  "depth_map_base64": "<base64-encoded float32 array>",
-  "width": 640,
-  "height": 480,
-  "model": "dav2-small",
-  "inference_ms": 832.8
+  "inference_ms": 110.5
 }
 ```
 
@@ -105,14 +80,16 @@ curl -X POST http://localhost:8081/depth/model \
 
 ## Docker
 
-### Build (cross-platform from Mac → AMD64)
+### Build (Multi-Platform: AMD64 & ARM64)
+
+The project leverages Docker's `buildx` plugin to assemble multi-arch containers. The `Dockerfile` natively adapts to the target architecture to fetch the right CPU dependencies (e.g., bypassing enormous CUDA wheels on `amd64` while grabbing native CPU packages on `arm64`).
 
 ```bash
-# Build and keep locally (for direct transfer)
+# Build and keep locally (single platform only for direct --load)
 docker buildx build --platform linux/amd64 --load -t kinekernel/depth-service:latest .
 
-# Or build and push to Docker Hub
-docker buildx build --platform linux/amd64 --push -t kinekernel/depth-service:latest .
+# Build multi-arch and push directly to Docker Hub (recommended for cross-platform)
+docker buildx build --platform linux/amd64,linux/arm64 --push -t kinekernel/depth-service:latest .
 ```
 
 > **Note:** The `--load` flag is required to keep the image in your local Docker so it can be exported. Without it, buildx only stores it in the build cache.
@@ -147,9 +124,11 @@ cd deploy
 # Download models
 bash download_models.sh dav2-small
 
-# Pull and start
-docker compose up -d
+# Pull and start (with the Linux GPU LLM service)
+docker compose --profile linux-gpu up -d
 ```
+
+> **Note for Mac/Windows Development:** You can run a standard `docker compose up -d` (without the profile flag) on your local machine. This will start only the Depth Service and Frontend UI, bypassing the Linux-specific Vulkan GPU drivers. The UI will then connect to your local natively-running Ollama instance!
 
 See [deploy/docker-compose.yml](deploy/docker-compose.yml) for the full configuration.
 
