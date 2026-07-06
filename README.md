@@ -24,6 +24,13 @@
 
 </div>
 
+
+
+## 🔥 News
+
+- **[2026.06]** 🎉 **MetricAnything** has been accepted to **ECCV 2026**.
+
+
 ## Abstract
 
 **Metric Anything** introduces a simple and scalable pretraining framework that learns metric depth from noisy, diverse 3D sources without manually engineered prompts, camera-specific modeling, or task-specific architectures. Our key insight is the **Sparse Metric Prompt**, created by randomly masking depth maps, which serves as a universal interface that decouples spatial reasoning from sensor and camera biases.
@@ -211,10 +218,10 @@ The maps are in the same size as the input image.
 ## Citation
 
 ```bibtex
-@article{metricanything2026,
+@inproceedings{ma2026metricanything,
   title={MetricAnything: Scaling Metric Depth Pretraining with Noisy Heterogeneous Sources},
-  author={Baorui Ma, Jiahui Yang, Donglin Di, Xuancheng Zhang, Jianxun Cui, Hao Li, Xie Yan and Wei Chen},
-  journal={arXiv preprint},
+  author={Baorui Ma and Jiahui Yang and Donglin Di and Xuancheng Zhang and Jianxun Cui and Hao Li and Xie Yan and Wei Chen},
+  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},
   year={2026}
 }
 ```
